@@ -6,3 +6,5 @@
 CREATE DATABASE IF NOT EXISTS `glob_gusters` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE `glob_gusters`;
 
+-- Eliminación de la base de datos
+DROP DATABASE IF EXISTS `glob_gusters`;
