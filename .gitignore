@@ -1,0 +1,24 @@
+# Configuración local / entorno
+.env
+*.log
+
+# XAMPP / MySQL
+*.ibd
+*.frm
+*.err
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# MySQL Workbench
+*.mwb.bak
+*.mwbhistory/
+
+# Sistema operativo
+Thumbs.db
+.DS_Store
+
+# Exportaciones temporales de respaldo
+*.bak
+*.tmp
