@@ -69,6 +69,11 @@ glob-gusters-videoclub/
 │           ├── 04_VDL.sql               # CREATE VIEW / consulta / DROP VIEW de ejemplo
 │           ├── 05_DCL.sql               # CREATE USER / GRANT / REVOKE de ejemplo
 │           └── 06_TCL.sql               # START TRANSACTION / SAVEPOINT / COMMIT / ROLLBACK
+├── tests/
+│   └── mariadb/
+│       └── glob_gusters_test.sql        # Pruebas de integridad integral del proyecto
+├── logs/
+│   └── <fecha>_ejecucion-completa/      # Registros de cada ejecución completa del proyecto
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -160,6 +165,34 @@ mysql -u root -p < sql/mariadb/commands/06_TCL.sql
      por socio.
    - `trg_cliente_aval_diferente_insert` y `trg_cliente_aval_diferente_update` (en
      `cliente`): un socio no puede ser su propio aval.
+
+### 5. Ejecutar las pruebas de integridad
+
+`tests/mariadb/glob_gusters_test.sql` verifica de punta a punta que el despliegue fue
+correcto: existencia de las 11 tablas y las 2 vistas, datos cargados en cada tabla,
+ausencia de registros huérfanos, cumplimiento de los tres triggers y del `CHECK` de
+fechas de `renta`, consistencia de las vistas y permisos de los usuarios creados en
+`05_DCL.sql`. Debe ejecutarse **con la bandera `--force`**, porque intencionalmente
+provoca errores esperados (inserciones que el motor debe rechazar) y necesita que la
+conexión continúe después de cada uno para poder verificarlos y limpiarlos:
+
+```bash
+mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
+    --force glob_gusters < tests/mariadb/glob_gusters_test.sql
+```
+
+El resultado es una tabla con una fila por prueba (`PASS`/`FAIL`) y un resumen final
+con el total de pruebas aprobadas. El script no requiere procedimientos almacenados,
+por lo que funciona incluso en instalaciones de XAMPP con la tabla de sistema
+`mysql.proc` desactualizada (un problema común al reemplazar el `mysqld` incluido por
+una versión más reciente sin ejecutar `mysql_upgrade`).
+
+### Registros de ejecución
+
+Cada corrida completa del proyecto (los ocho scripts más las pruebas de integridad)
+queda documentada en `logs/<fecha>_ejecucion-completa/`, con un log por script y un
+`00_resumen.log` que indica el código de salida de cada paso y cualquier incidencia
+detectada y corregida durante esa ejecución.
 
 ## Cómo subir este proyecto a GitHub
 
