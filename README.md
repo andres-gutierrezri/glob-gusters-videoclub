@@ -80,40 +80,69 @@ glob-gusters-videoclub/
 ## Requisitos previos
 
 - [XAMPP](https://www.apachefriends.org/) con el módulo **MySQL/MariaDB** habilitado.
-- Cliente `mysql` disponible en la terminal (incluido en `xampp/mysql/bin`).
+- Cliente `mariadb` (o `mysql`) disponible en la terminal. Ruta típica según sistema
+  operativo:
+  - **Windows:** `C:\xampp\mysql\bin\mariadb.exe`
+  - **macOS:** `/Applications/XAMPP/xamppfiles/bin/mariadb`
+  - **Linux:** `/opt/lampp/bin/mariadb`
 - Visual Studio Code con la extensión "MySQL" o "SQLTools" (opcional, para editar).
 - MySQL Workbench (opcional, para la ingeniería inversa del modelo E-R).
 - Git y una cuenta de GitHub (opcional, para control de versiones).
 
 ## Ejecución paso a paso en XAMPP MariaDB
 
+Todos los ejemplos usan la misma conexión en los tres sistemas operativos
+(`-u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4`); sólo cambia la
+ruta del binario y cómo el shell redirige la entrada estándar. Por defecto, XAMPP
+configura el usuario `root` **sin contraseña**: cuando el comando pida `Enter password:`,
+basta con presionar Enter.
+
 ### 1. Iniciar los servicios
 
-Abre el **Panel de Control de XAMPP** y arranca el módulo **MySQL** (usa el motor
-MariaDB internamente). Verifica que el estado quede en verde ("Running").
+**Windows y macOS:** abre el **Panel de Control de XAMPP** y arranca el módulo
+**MySQL** (usa el motor MariaDB internamente). Verifica que el estado quede en verde
+("Running").
 
-### 2. Verificar que el cliente `mysql` es accesible
+**Linux:** inicia XAMPP desde la terminal con:
+
+```bash
+sudo /opt/lampp/lampp start
+```
+
+o abre el panel gráfico con `sudo /opt/lampp/manager-linux-x64.run` si está instalado.
+Verifica que el módulo MySQL/MariaDB quede activo.
+
+### 2. Verificar que el cliente `mariadb` es accesible
 
 **Windows (PowerShell):**
 
 ```powershell
 # Agrega C:\xampp\mysql\bin al PATH si el comando no se reconoce.
-mysql --version
+C:\xampp\mysql\bin\mariadb.exe --version
 ```
 
-**macOS / Linux (con XAMPP instalado en /Applications/XAMPP o /opt/lampp):**
+**macOS:**
 
 ```bash
-/Applications/XAMPP/xamppfiles/bin/mysql --version
-# o, si ya está en el PATH:
-mysql --version
+/Applications/XAMPP/xamppfiles/bin/mariadb --version
+# o, si ya agregaste esa ruta al PATH:
+mariadb --version
+```
+
+**Linux:**
+
+```bash
+/opt/lampp/bin/mariadb --version
+# o, si ya agregaste esa ruta al PATH:
+mariadb --version
 ```
 
 También puedes usar el script de diagnóstico incluido en el proyecto para confirmar
-versión, puerto y estado del servidor antes de continuar:
+versión, puerto y estado del servidor antes de continuar (ajusta la ruta del binario
+según tu sistema operativo, como en el paso 3):
 
 ```bash
-mysql -u root -p < sql/mariadb/check-mariadb.sql
+mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < sql/mariadb/check-mariadb.sql
 ```
 
 ### 3. Ejecutar los scripts en orden
@@ -121,36 +150,61 @@ mysql -u root -p < sql/mariadb/check-mariadb.sql
 El orden de ejecución **es obligatorio**, porque cada script depende de que la
 estructura o los datos del anterior ya existan (ver `docs/steps-create-project-database.pdf`).
 
-```bash
-# 1. Crea la base de datos, las tablas, las restricciones y el trigger de negocio.
-mysql -u root -p < sql/mariadb/glob_gusters.sql
+**Windows (PowerShell)** — PowerShell no admite `<` para redirigir un archivo a la
+entrada estándar, por lo que se usa `Get-Content` junto con una función auxiliar:
 
-# 2. Carga los datos de prueba (nacionalidades, películas, actores, clientes, etc.).
-mysql -u root -p < sql/mariadb/glob_gusters_insert.sql
+```powershell
+function Invoke-GlobGustersScript($Path) {
+    Get-Content $Path | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4
+}
 
-# 3. Comandos DDL: crea/altera/elimina estructuras adicionales de ejemplo.
-mysql -u root -p < sql/mariadb/commands/01_DDL.sql
-
-# 4. Comandos DML: inserta, actualiza y elimina registros de ejemplo.
-mysql -u root -p < sql/mariadb/commands/02_DML.sql
-
-# 5. Comandos DQL: ejecuta consultas de verificación con JOIN y GROUP BY.
-mysql -u root -p < sql/mariadb/commands/03_DQL.sql
-
-# 6. Comandos VDL: crea y consulta vistas basadas en los datos ya cargados.
-mysql -u root -p < sql/mariadb/commands/04_VDL.sql
-
-# 7. Comandos DCL: crea usuarios y gestiona permisos sobre el esquema.
-mysql -u root -p < sql/mariadb/commands/05_DCL.sql
-
-# 8. Comandos TCL: demuestra transacciones con COMMIT, ROLLBACK y SAVEPOINT.
-mysql -u root -p < sql/mariadb/commands/06_TCL.sql
+Invoke-GlobGustersScript "sql\mariadb\glob_gusters.sql"          # 1. Base de datos, tablas, constraints y trigger de negocio
+Invoke-GlobGustersScript "sql\mariadb\glob_gusters_insert.sql"   # 2. Datos de prueba
+Invoke-GlobGustersScript "sql\mariadb\commands\01_DDL.sql"       # 3. CREATE / ALTER / DROP de ejemplo
+Invoke-GlobGustersScript "sql\mariadb\commands\02_DML.sql"       # 4. INSERT / UPDATE / DELETE de ejemplo
+Invoke-GlobGustersScript "sql\mariadb\commands\03_DQL.sql"       # 5. SELECT / JOIN / GROUP BY de ejemplo
+Invoke-GlobGustersScript "sql\mariadb\commands\04_VDL.sql"       # 6. CREATE VIEW / consulta / DROP VIEW de ejemplo
+Invoke-GlobGustersScript "sql\mariadb\commands\05_DCL.sql"       # 7. CREATE USER / GRANT / REVOKE de ejemplo
+Invoke-GlobGustersScript "sql\mariadb\commands\06_TCL.sql"       # 8. START TRANSACTION / SAVEPOINT / COMMIT / ROLLBACK
 ```
 
-> En Windows, reemplaza `mysql` por la ruta completa si el comando no está en el
-> `PATH`, por ejemplo: `C:\xampp\mysql\bin\mysql -u root -p < sql\mariadb\glob_gusters.sql`.
-> Por defecto, XAMPP configura el usuario `root` **sin contraseña**; en ese caso puedes
-> omitir `-p` o presionar Enter cuando se solicite la contraseña.
+**macOS:**
+
+```bash
+run_mariadb() {
+    /Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 "$@"
+}
+
+run_mariadb < sql/mariadb/glob_gusters.sql          # 1. Base de datos, tablas, constraints y trigger de negocio
+run_mariadb < sql/mariadb/glob_gusters_insert.sql   # 2. Datos de prueba
+run_mariadb < sql/mariadb/commands/01_DDL.sql       # 3. CREATE / ALTER / DROP de ejemplo
+run_mariadb < sql/mariadb/commands/02_DML.sql       # 4. INSERT / UPDATE / DELETE de ejemplo
+run_mariadb < sql/mariadb/commands/03_DQL.sql       # 5. SELECT / JOIN / GROUP BY de ejemplo
+run_mariadb < sql/mariadb/commands/04_VDL.sql       # 6. CREATE VIEW / consulta / DROP VIEW de ejemplo
+run_mariadb < sql/mariadb/commands/05_DCL.sql       # 7. CREATE USER / GRANT / REVOKE de ejemplo
+run_mariadb < sql/mariadb/commands/06_TCL.sql       # 8. START TRANSACTION / SAVEPOINT / COMMIT / ROLLBACK
+```
+
+**Linux:**
+
+```bash
+run_mariadb() {
+    /opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 "$@"
+}
+
+run_mariadb < sql/mariadb/glob_gusters.sql          # 1. Base de datos, tablas, constraints y trigger de negocio
+run_mariadb < sql/mariadb/glob_gusters_insert.sql   # 2. Datos de prueba
+run_mariadb < sql/mariadb/commands/01_DDL.sql       # 3. CREATE / ALTER / DROP de ejemplo
+run_mariadb < sql/mariadb/commands/02_DML.sql       # 4. INSERT / UPDATE / DELETE de ejemplo
+run_mariadb < sql/mariadb/commands/03_DQL.sql       # 5. SELECT / JOIN / GROUP BY de ejemplo
+run_mariadb < sql/mariadb/commands/04_VDL.sql       # 6. CREATE VIEW / consulta / DROP VIEW de ejemplo
+run_mariadb < sql/mariadb/commands/05_DCL.sql       # 7. CREATE USER / GRANT / REVOKE de ejemplo
+run_mariadb < sql/mariadb/commands/06_TCL.sql       # 8. START TRANSACTION / SAVEPOINT / COMMIT / ROLLBACK
+```
+
+> Si prefieres usar `cmd.exe` en Windows en vez de PowerShell, la redirección `<`
+> funciona igual que en macOS/Linux:
+> `C:\xampp\mysql\bin\mariadb.exe -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < sql\mariadb\glob_gusters.sql`
 
 ### 4. Verificar la instalación desde phpMyAdmin (opcional)
 
@@ -174,8 +228,23 @@ fechas de `renta`, consistencia de las vistas y permisos de los usuarios creados
 provoca errores esperados (inserciones que el motor debe rechazar) y necesita que la
 conexión continúe después de cada uno para poder verificarlos y limpiarlos:
 
+**Windows (PowerShell):**
+
+```powershell
+Get-Content tests\mariadb\glob_gusters_test.sql | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters
+```
+
+**macOS:**
+
 ```bash
-mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
+/Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
+    --force glob_gusters < tests/mariadb/glob_gusters_test.sql
+```
+
+**Linux:**
+
+```bash
+/opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
     --force glob_gusters < tests/mariadb/glob_gusters_test.sql
 ```
 
@@ -187,7 +256,10 @@ una versión más reciente sin ejecutar `mysql_upgrade`).
 
 ## Cómo subir este proyecto a GitHub
 
-```powershell
+Estos comandos de `git` son idénticos en Windows (PowerShell o cmd.exe), macOS y
+Linux:
+
+```bash
 git init
 git add .
 git commit -m "Primer commit: modelo normalizado Glob-Gusters"
