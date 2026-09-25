@@ -1,17 +1,74 @@
 # Glob-Gusters Video-Club · Base de Datos Relacional
 
-Script SQL correspondiente al ejercicio de la cadena de Video-Clubs **Glob-Gusters**, desarrollado como
-material de apoyo para la asignatura de Base de Datos (Ingeniería de Sistemas).
+Proyecto de base de datos relacional para la cadena de Video-Clubs **Glob-Gusters**,
+desarrollado como material de apoyo para la asignatura de Base de Datos (Ingeniería de
+Sistemas). El ejercicio original y su resolución paso a paso (identificación de
+entidades, resolución de relaciones N-M, campos multivalorados y llaves) se encuentran
+documentados en `docs/relational-database.pdf`.
 
-Motor de base de datos: **MariaDB / MySQL** sobre entorno **XAMPP**.
+Motor de base de datos: **MariaDB** sobre entorno **XAMPP**.
+
+## Descripción del ejercicio
+
+Glob-Gusters necesita una base de datos para gestionar el alquiler de películas. El
+negocio maneja la siguiente información:
+
+- Cada **película** tiene título, año, nacionalidad, productora y un director.
+- En una película participan varios **actores** (con su nacionalidad y sexo), cada uno
+  con un rol (Principal o Secundario).
+- Cada película tiene uno o varios **ejemplares** físicos, diferenciados por número y
+  con un estado de conservación.
+- Los **clientes** (socios) alquilan ejemplares mediante **rentas**, que registran la
+  fecha de inicio y de devolución.
+- Un socio debe estar avalado por otro socio ya existente.
+- Un socio puede tener, como máximo, **4 ejemplares** alquilados sin devolver al mismo
+  tiempo (regla de negocio implementada mediante un `TRIGGER`).
+
+### Modelo normalizado (Tercera Forma Normal — 3FN)
+
+Para llegar a 3FN se extrajeron como catálogos independientes los campos que en el
+enunciado original eran multivaluados o se repetían como texto libre
+(`nacionalidad`, `productora`, `estado`), y se resolvieron las relaciones N-M mediante
+tablas intermedias con llave subrogada autoincremental (`reparto`, `ejemplar_renta`).
+
+| Tabla             | Llave primaria         | Descripción                                            |
+|-------------------|-------------------------|---------------------------------------------------------|
+| `nacionalidad`    | `Nacionalidad_ID`       | Catálogo de países de origen.                            |
+| `productora`      | `Productora_ID`         | Catálogo de casas productoras.                           |
+| `estado`          | `Estado_ID`             | Catálogo de estados de conservación de un ejemplar.      |
+| `director`        | `Director_ID`           | Directores de películas.                                 |
+| `pelicula`        | `Pelicula_ID`           | Catálogo de películas.                                   |
+| `actor`           | `Actor_ID`               | Actores.                                                 |
+| `reparto`         | `Reparto_ID`             | Resuelve la relación N-M película ↔ actor.               |
+| `cliente`         | `Cliente_ID`             | Socios del video-club (con aval autorreferenciado).      |
+| `ejemplar`        | `Ejemplar_ID`            | Copias físicas de cada película.                         |
+| `renta`           | `Renta_ID`               | Encabezado de cada alquiler.                              |
+| `ejemplar_renta`  | `Ejemplar_Renta_ID`      | Resuelve la relación N-M renta ↔ ejemplar.                |
+
+El detalle completo de cada relación (tabla origen, campo FK, tabla destino, campo PK
+y cardinalidad) está documentado como bloque de comentarios dentro de
+`sql/mariadb/glob_gusters.sql`.
 
 ## Contenido del repositorio
 
 ```
 glob-gusters-videoclub/
+├── docs/
+│   ├── relational-database.pdf          # Taller resuelto: diseño E-R de Glob-Gusters
+│   ├── sql_scripts_commands.pdf         # Resumen de los grupos de comandos SQL (DDL/DML/DQL/DCL/TCL/VDL)
+│   └── steps-create-project-database.pdf# Orden de ejecución recomendado del proyecto
 ├── sql/
-│   └── glob_gusters.sql   # Script DDL + datos de prueba + consultas de verificación
-├── docs/                  # Espacio reservado para el diagrama E-R exportado desde MySQL Workbench
+│   └── mariadb/
+│       ├── glob_gusters.sql             # DDL: base de datos, tablas, constraints y trigger
+│       ├── glob_gusters_insert.sql      # DML: datos de prueba para todas las tablas
+│       ├── check-mariadb.sql            # Script de diagnóstico del servidor MariaDB
+│       └── commands/
+│           ├── 01_DDL.sql               # CREATE / ALTER / DROP de ejemplo
+│           ├── 02_DML.sql               # INSERT / UPDATE / DELETE de ejemplo
+│           ├── 03_DQL.sql               # SELECT / JOIN / GROUP BY de ejemplo
+│           ├── 04_VDL.sql               # CREATE VIEW / consulta / DROP VIEW de ejemplo
+│           ├── 05_DCL.sql               # CREATE USER / GRANT / REVOKE de ejemplo
+│           └── 06_TCL.sql               # START TRANSACTION / SAVEPOINT / COMMIT / ROLLBACK
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -19,32 +76,93 @@ glob-gusters-videoclub/
 
 ## Requisitos previos
 
-- XAMPP con MariaDB/MySQL habilitado.
-- Variable de entorno `Path` de Windows apuntando a `C:\xampp\mysql\bin`.
-- Visual Studio Code con la extensión "MySQL" o "SQLTools".
-- MySQL Workbench (para la ingeniería inversa del modelo E-R).
-- Git instalado y una cuenta de GitHub.
+- [XAMPP](https://www.apachefriends.org/) con el módulo **MySQL/MariaDB** habilitado.
+- Cliente `mysql` disponible en la terminal (incluido en `xampp/mysql/bin`).
+- Visual Studio Code con la extensión "MySQL" o "SQLTools" (opcional, para editar).
+- MySQL Workbench (opcional, para la ingeniería inversa del modelo E-R).
+- Git y una cuenta de GitHub (opcional, para control de versiones).
 
-## Ejecución del script (PowerShell)
+## Ejecución paso a paso en XAMPP MariaDB
+
+### 1. Iniciar los servicios
+
+Abre el **Panel de Control de XAMPP** y arranca el módulo **MySQL** (usa el motor
+MariaDB internamente). Verifica que el estado quede en verde ("Running").
+
+### 2. Verificar que el cliente `mysql` es accesible
+
+**Windows (PowerShell):**
 
 ```powershell
-# 1. Verificar que el cliente mysql es accesible desde la terminal
+# Agrega C:\xampp\mysql\bin al PATH si el comando no se reconoce.
 mysql --version
-
-# 2. Ejecutar el script contra el servidor local de XAMPP
-mysql -u root -p < sql/glob_gusters.sql
 ```
 
-Si la conexión es exitosa, el script crea la base de datos `glob_gusters`, sus tablas, las
-restricciones de integridad referencial, un disparador de regla de negocio y un conjunto de
-datos de prueba.
+**macOS / Linux (con XAMPP instalado en /Applications/XAMPP o /opt/lampp):**
+
+```bash
+/Applications/XAMPP/xamppfiles/bin/mysql --version
+# o, si ya está en el PATH:
+mysql --version
+```
+
+También puedes usar el script de diagnóstico incluido en el proyecto para confirmar
+versión, puerto y estado del servidor antes de continuar:
+
+```bash
+mysql -u root -p < sql/mariadb/check-mariadb.sql
+```
+
+### 3. Ejecutar los scripts en orden
+
+El orden de ejecución **es obligatorio**, porque cada script depende de que la
+estructura o los datos del anterior ya existan (ver `docs/steps-create-project-database.pdf`).
+
+```bash
+# 1. Crea la base de datos, las tablas, las restricciones y el trigger de negocio.
+mysql -u root -p < sql/mariadb/glob_gusters.sql
+
+# 2. Carga los datos de prueba (nacionalidades, películas, actores, clientes, etc.).
+mysql -u root -p < sql/mariadb/glob_gusters_insert.sql
+
+# 3. Comandos DDL: crea/altera/elimina estructuras adicionales de ejemplo.
+mysql -u root -p < sql/mariadb/commands/01_DDL.sql
+
+# 4. Comandos DML: inserta, actualiza y elimina registros de ejemplo.
+mysql -u root -p < sql/mariadb/commands/02_DML.sql
+
+# 5. Comandos DQL: ejecuta consultas de verificación con JOIN y GROUP BY.
+mysql -u root -p < sql/mariadb/commands/03_DQL.sql
+
+# 6. Comandos VDL: crea y consulta vistas basadas en los datos ya cargados.
+mysql -u root -p < sql/mariadb/commands/04_VDL.sql
+
+# 7. Comandos DCL: crea usuarios y gestiona permisos sobre el esquema.
+mysql -u root -p < sql/mariadb/commands/05_DCL.sql
+
+# 8. Comandos TCL: demuestra transacciones con COMMIT, ROLLBACK y SAVEPOINT.
+mysql -u root -p < sql/mariadb/commands/06_TCL.sql
+```
+
+> En Windows, reemplaza `mysql` por la ruta completa si el comando no está en el
+> `PATH`, por ejemplo: `C:\xampp\mysql\bin\mysql -u root -p < sql\mariadb\glob_gusters.sql`.
+> Por defecto, XAMPP configura el usuario `root` **sin contraseña**; en ese caso puedes
+> omitir `-p` o presionar Enter cuando se solicite la contraseña.
+
+### 4. Verificar la instalación desde phpMyAdmin (opcional)
+
+1. Abre `http://localhost/phpmyadmin` con XAMPP en ejecución.
+2. Selecciona la base de datos `glob_gusters` en el panel izquierdo.
+3. Confirma que existan las 11 tablas del modelo, las vistas `v_ejemplares_detalle` y
+   `v_clientes_con_aval`, y que la pestaña **Triggers** de `ejemplar_renta` muestre
+   `trg_ejemplar_renta_max_4`.
 
 ## Cómo subir este proyecto a GitHub
 
 ```powershell
 git init
 git add .
-git commit -m "Primer commit: script SQL Glob-Gusters"
+git commit -m "Primer commit: modelo normalizado Glob-Gusters"
 git branch -M main
 git remote add origin https://github.com/<usuario>/glob-gusters-videoclub.git
 git push -u origin main
