@@ -6,6 +6,11 @@
 -- CÓMO SE EJECUTA:
 --   Debe correrse DESPUÉS de 02_DML.sql, ya que consulta datos y columnas
 --   (Email, Duracion_Minutos, Estado_ID actualizado) generados en los scripts previos.
+--
+-- EJECUCIÓN SEGURA / IDEMPOTENCIA:
+--   Todas las sentencias son SELECT de sólo lectura: no modifican datos, por lo que
+--   ejecutar este script una o cien veces seguidas siempre produce el mismo
+--   resultado y nunca falla por repetición.
 -- =====================================================================================
 
 USE `glob_gusters`;

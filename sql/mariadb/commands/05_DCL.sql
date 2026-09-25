@@ -8,6 +8,13 @@
 --   Debe correrse DESPUÉS de 04_VDL.sql, cuando la estructura, los datos y las vistas
 --   ya están listos para ser consultados por otros usuarios. Requiere ejecutarse con
 --   un usuario con privilegios administrativos (por defecto, `root` en XAMPP).
+--
+-- EJECUCIÓN SEGURA / IDEMPOTENCIA:
+--   CREATE USER usa IF NOT EXISTS; GRANT vuelve a otorgar los mismos privilegios sin
+--   error si ya estaban concedidos; y REVOKE DELETE es seguro de repetir siempre que
+--   el usuario ya tenga al menos un privilegio otorgado en ese esquema (lo garantiza
+--   el GRANT anterior en este mismo script). Verificado ejecutando el script dos
+--   veces seguidas sin reiniciar la base de datos.
 -- =====================================================================================
 
 -- No se antepone USE porque GRANT/CREATE USER son sentencias a nivel de servidor,

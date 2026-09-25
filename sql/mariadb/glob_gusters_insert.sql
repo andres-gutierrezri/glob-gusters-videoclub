@@ -7,127 +7,310 @@
 -- glob_gusters.sql. El orden de inserción respeta las dependencias de llave foránea:
 -- primero los catálogos (nacionalidad, productora, estado), luego director/actor/
 -- pelicula, después reparto, cliente, ejemplar, renta y finalmente ejemplar_renta.
+--
+-- EJECUCIÓN SEGURA / IDEMPOTENCIA:
+--   Este script puede ejecutarse varias veces sobre la misma base de datos sin crear
+--   filas duplicadas ni lanzar errores. Para lograrlo:
+--   - No se usan IDs numéricos fijos como llave foránea (los valores AUTO_INCREMENT
+--     pueden variar entre corridas); en su lugar cada FK se resuelve con una
+--     subconsulta por su llave natural (nombre, título+año, DNI, etc.).
+--   - Las tablas con restricción UNIQUE (nacionalidad, productora, estado, pelicula,
+--     cliente, ejemplar, reparto, ejemplar_renta) usan INSERT IGNORE: si la fila ya
+--     existe, la inserción se descarta en silencio.
+--   - director y actor no tienen una restricción UNIQUE natural, así que se protegen
+--     con "INSERT ... SELECT ... WHERE NOT EXISTS" para no duplicarlos.
+--   - renta no tiene una restricción UNIQUE (un cliente sí puede alquilar más de una
+--     vez el mismo día en la vida real), así que cada fila de este script se protege
+--     también con WHERE NOT EXISTS sobre la combinación cliente + fecha de inicio,
+--     que identifica de forma única a cada renta de este conjunto de datos de
+--     ejemplo. NO se usa INSERT IGNORE aquí ni en ejemplar_renta, porque cliente y
+--     ejemplar_renta tienen triggers BEFORE INSERT con SIGNAL (reglas de negocio) que
+--     IGNORE no suprime: un intento de inserción duplicada igual dispararía la
+--     validación del trigger. Al filtrar con WHERE NOT EXISTS antes, esas filas ya
+--     existentes ni siquiera intentan insertarse, y el trigger nunca se evalúa dos
+--     veces para el mismo dato.
 -- =====================================================================================
 
 -- Selecciona el esquema donde se insertarán los datos.
 USE `glob_gusters`;
 
 -- -------------------------------------------------------------------------------------
--- Catálogo: nacionalidad
+-- Catálogo: nacionalidad (UNIQUE en Nombre -> INSERT IGNORE es suficiente)
 -- -------------------------------------------------------------------------------------
--- Inserta los países de origen usados por actores, directores y películas.
-INSERT INTO `nacionalidad` (`Nombre`) VALUES
-    ('Estados Unidos'),  -- Nacionalidad_ID = 1
-    ('España'),          -- Nacionalidad_ID = 2
-    ('Reino Unido'),     -- Nacionalidad_ID = 3
-    ('Francia'),         -- Nacionalidad_ID = 4
-    ('México');          -- Nacionalidad_ID = 5
+INSERT IGNORE INTO `nacionalidad` (`Nombre`) VALUES
+    ('Estados Unidos'),
+    ('España'),
+    ('Reino Unido'),
+    ('Francia'),
+    ('México');
 
 -- -------------------------------------------------------------------------------------
--- Catálogo: productora
+-- Catálogo: productora (UNIQUE en Nombre -> INSERT IGNORE es suficiente)
 -- -------------------------------------------------------------------------------------
--- Inserta las casas productoras que aparecen en el catálogo de películas.
-INSERT INTO `productora` (`Nombre`) VALUES
-    ('M.G.M.'),            -- Productora_ID = 1
-    ('Warner Bros.'),      -- Productora_ID = 2
-    ('Universal Pictures'),-- Productora_ID = 3
-    ('El Deseo');          -- Productora_ID = 4
+INSERT IGNORE INTO `productora` (`Nombre`) VALUES
+    ('M.G.M.'),
+    ('Warner Bros.'),
+    ('Universal Pictures'),
+    ('El Deseo');
 
 -- -------------------------------------------------------------------------------------
--- Catálogo: estado
+-- Catálogo: estado (UNIQUE en Nombre -> INSERT IGNORE es suficiente)
 -- -------------------------------------------------------------------------------------
--- Inserta los posibles estados de conservación de un ejemplar físico.
-INSERT INTO `estado` (`Nombre`) VALUES
-    ('Nuevo'),    -- Estado_ID = 1
-    ('Bueno'),    -- Estado_ID = 2
-    ('Regular'),  -- Estado_ID = 3
-    ('Dañado');   -- Estado_ID = 4
+INSERT IGNORE INTO `estado` (`Nombre`) VALUES
+    ('Nuevo'),
+    ('Bueno'),
+    ('Regular'),
+    ('Dañado');
 
 -- -------------------------------------------------------------------------------------
--- Tabla: director
+-- Tabla: director (sin UNIQUE natural -> se protege con WHERE NOT EXISTS por Nombre)
 -- -------------------------------------------------------------------------------------
--- Inserta directores, referenciando la nacionalidad ya cargada.
-INSERT INTO `director` (`Nombre`, `Nacionalidad_ID`) VALUES
-    ('Mervyn LeRoy', 1),        -- Director_ID = 1, Estados Unidos
-    ('Pedro Almodóvar', 2),     -- Director_ID = 2, España
-    ('Christopher Nolan', 3),   -- Director_ID = 3, Reino Unido
-    ('Luc Besson', 4);          -- Director_ID = 4, Francia
+INSERT INTO `director` (`Nombre`, `Nacionalidad_ID`)
+SELECT 'Mervyn LeRoy', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Estados Unidos')
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `director` WHERE `Nombre` = 'Mervyn LeRoy');
+
+INSERT INTO `director` (`Nombre`, `Nacionalidad_ID`)
+SELECT 'Pedro Almodóvar', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'España')
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `director` WHERE `Nombre` = 'Pedro Almodóvar');
+
+INSERT INTO `director` (`Nombre`, `Nacionalidad_ID`)
+SELECT 'Christopher Nolan', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Reino Unido')
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `director` WHERE `Nombre` = 'Christopher Nolan');
+
+INSERT INTO `director` (`Nombre`, `Nacionalidad_ID`)
+SELECT 'Luc Besson', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Francia')
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `director` WHERE `Nombre` = 'Luc Besson');
 
 -- -------------------------------------------------------------------------------------
--- Tabla: pelicula
+-- Tabla: pelicula (UNIQUE en Titulo+Anio -> INSERT IGNORE es suficiente)
 -- -------------------------------------------------------------------------------------
--- Inserta películas referenciando nacionalidad, productora y director.
-INSERT INTO `pelicula` (`Titulo`, `Anio`, `Nacionalidad_ID`, `Productora_ID`, `Director_ID`) VALUES
-    ('Quo Vadis', 1951, 1, 1, 1),                 -- Pelicula_ID = 1
-    ('Todo sobre mi madre', 1999, 2, 4, 2),       -- Pelicula_ID = 2
-    ('Interstellar', 2014, 3, 3, 3),              -- Pelicula_ID = 3
-    ('El quinto elemento', 1997, 4, 2, 4);        -- Pelicula_ID = 4
+INSERT IGNORE INTO `pelicula` (`Titulo`, `Anio`, `Nacionalidad_ID`, `Productora_ID`, `Director_ID`)
+VALUES (
+    'Quo Vadis', 1951,
+    (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Estados Unidos'),
+    (SELECT `Productora_ID` FROM `productora` WHERE `Nombre` = 'M.G.M.'),
+    (SELECT `Director_ID` FROM `director` WHERE `Nombre` = 'Mervyn LeRoy')
+);
+
+INSERT IGNORE INTO `pelicula` (`Titulo`, `Anio`, `Nacionalidad_ID`, `Productora_ID`, `Director_ID`)
+VALUES (
+    'Todo sobre mi madre', 1999,
+    (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'España'),
+    (SELECT `Productora_ID` FROM `productora` WHERE `Nombre` = 'El Deseo'),
+    (SELECT `Director_ID` FROM `director` WHERE `Nombre` = 'Pedro Almodóvar')
+);
+
+INSERT IGNORE INTO `pelicula` (`Titulo`, `Anio`, `Nacionalidad_ID`, `Productora_ID`, `Director_ID`)
+VALUES (
+    'Interstellar', 2014,
+    (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Reino Unido'),
+    (SELECT `Productora_ID` FROM `productora` WHERE `Nombre` = 'Universal Pictures'),
+    (SELECT `Director_ID` FROM `director` WHERE `Nombre` = 'Christopher Nolan')
+);
+
+INSERT IGNORE INTO `pelicula` (`Titulo`, `Anio`, `Nacionalidad_ID`, `Productora_ID`, `Director_ID`)
+VALUES (
+    'El quinto elemento', 1997,
+    (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Francia'),
+    (SELECT `Productora_ID` FROM `productora` WHERE `Nombre` = 'Warner Bros.'),
+    (SELECT `Director_ID` FROM `director` WHERE `Nombre` = 'Luc Besson')
+);
 
 -- -------------------------------------------------------------------------------------
--- Tabla: actor
+-- Tabla: actor (sin UNIQUE natural -> se protege con WHERE NOT EXISTS por Nombre)
 -- -------------------------------------------------------------------------------------
--- Inserta actores referenciando su nacionalidad.
-INSERT INTO `actor` (`Nombre`, `Nacionalidad_ID`, `Sexo`) VALUES
-    ('Robert Taylor', 1, 'M'),      -- Actor_ID = 1
-    ('Deborah Kerr', 3, 'F'),       -- Actor_ID = 2
-    ('Cecilia Roth', 5, 'F'),       -- Actor_ID = 3
-    ('Matthew McConaughey', 1, 'M'),-- Actor_ID = 4
-    ('Anne Hathaway', 1, 'F'),      -- Actor_ID = 5
-    ('Milla Jovovich', 1, 'F');     -- Actor_ID = 6
+INSERT INTO `actor` (`Nombre`, `Nacionalidad_ID`, `Sexo`)
+SELECT 'Robert Taylor', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Estados Unidos'), 'M'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `actor` WHERE `Nombre` = 'Robert Taylor');
+
+INSERT INTO `actor` (`Nombre`, `Nacionalidad_ID`, `Sexo`)
+SELECT 'Deborah Kerr', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Reino Unido'), 'F'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `actor` WHERE `Nombre` = 'Deborah Kerr');
+
+INSERT INTO `actor` (`Nombre`, `Nacionalidad_ID`, `Sexo`)
+SELECT 'Cecilia Roth', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'México'), 'F'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `actor` WHERE `Nombre` = 'Cecilia Roth');
+
+INSERT INTO `actor` (`Nombre`, `Nacionalidad_ID`, `Sexo`)
+SELECT 'Matthew McConaughey', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Estados Unidos'), 'M'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `actor` WHERE `Nombre` = 'Matthew McConaughey');
+
+INSERT INTO `actor` (`Nombre`, `Nacionalidad_ID`, `Sexo`)
+SELECT 'Anne Hathaway', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Estados Unidos'), 'F'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `actor` WHERE `Nombre` = 'Anne Hathaway');
+
+INSERT INTO `actor` (`Nombre`, `Nacionalidad_ID`, `Sexo`)
+SELECT 'Milla Jovovich', (SELECT `Nacionalidad_ID` FROM `nacionalidad` WHERE `Nombre` = 'Estados Unidos'), 'F'
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `actor` WHERE `Nombre` = 'Milla Jovovich');
 
 -- -------------------------------------------------------------------------------------
--- Tabla: reparto
+-- Tabla: reparto (UNIQUE en Pelicula_ID+Actor_ID -> INSERT IGNORE es suficiente)
 -- -------------------------------------------------------------------------------------
--- Asocia actores a películas indicando el rol desempeñado (Principal/Secundario).
-INSERT INTO `reparto` (`Pelicula_ID`, `Actor_ID`, `Rol`) VALUES
-    (1, 1, 'Principal'),   -- Quo Vadis - Robert Taylor
-    (1, 2, 'Principal'),   -- Quo Vadis - Deborah Kerr
-    (2, 3, 'Principal'),   -- Todo sobre mi madre - Cecilia Roth
-    (3, 4, 'Principal'),   -- Interstellar - Matthew McConaughey
-    (3, 5, 'Secundario'),  -- Interstellar - Anne Hathaway
-    (4, 6, 'Principal');   -- El quinto elemento - Milla Jovovich
+INSERT IGNORE INTO `reparto` (`Pelicula_ID`, `Actor_ID`, `Rol`) VALUES
+    ((SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Quo Vadis' AND `Anio` = 1951),
+     (SELECT `Actor_ID` FROM `actor` WHERE `Nombre` = 'Robert Taylor'), 'Principal'),
+    ((SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Quo Vadis' AND `Anio` = 1951),
+     (SELECT `Actor_ID` FROM `actor` WHERE `Nombre` = 'Deborah Kerr'), 'Principal'),
+    ((SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Todo sobre mi madre' AND `Anio` = 1999),
+     (SELECT `Actor_ID` FROM `actor` WHERE `Nombre` = 'Cecilia Roth'), 'Principal'),
+    ((SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Interstellar' AND `Anio` = 2014),
+     (SELECT `Actor_ID` FROM `actor` WHERE `Nombre` = 'Matthew McConaughey'), 'Principal'),
+    ((SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Interstellar' AND `Anio` = 2014),
+     (SELECT `Actor_ID` FROM `actor` WHERE `Nombre` = 'Anne Hathaway'), 'Secundario'),
+    ((SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'El quinto elemento' AND `Anio` = 1997),
+     (SELECT `Actor_ID` FROM `actor` WHERE `Nombre` = 'Milla Jovovich'), 'Principal');
 
 -- -------------------------------------------------------------------------------------
--- Tabla: cliente
--- -------------------------------------------------------------------------------------
+-- Tabla: cliente (UNIQUE en Dni -> INSERT IGNORE es suficiente; el aval se resuelve
+-- por DNI del socio avalista, nunca por Cliente_ID numérico).
 -- El primer socio no tiene aval (es el socio fundador); los siguientes son avalados
 -- por un socio previamente registrado, cumpliendo la regla de negocio del enunciado.
-INSERT INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`) VALUES
-    ('1000000001', 'Laura Gómez', 'Calle 10 # 5-20', '3001234567', NULL);        -- Cliente_ID = 1
+-- -------------------------------------------------------------------------------------
+INSERT IGNORE INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
+VALUES ('1000000001', 'Laura Gómez', 'Calle 10 # 5-20', '3001234567', NULL);
 
-INSERT INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`) VALUES
-    ('1000000002', 'Carlos Pérez', 'Carrera 8 # 12-45', '3007654321', 1),        -- Cliente_ID = 2, avalado por Laura
-    ('1000000003', 'María Rodríguez', 'Av. Siempre Viva 742', '3009876543', 1), -- Cliente_ID = 3, avalado por Laura
-    ('1000000004', 'Andrés Torres', 'Diagonal 45 # 9-10', '3004561234', 2);     -- Cliente_ID = 4, avalado por Carlos
+-- Nota: la subconsulta que resuelve el aval se envuelve en una tabla derivada
+-- (SELECT ... FROM (SELECT ...) AS tmp) porque MariaDB no permite que un INSERT
+-- referencie directamente en VALUES() la misma tabla en la que se está insertando
+-- (ERROR 1093: "Table 'cliente' is specified twice"); envolver la subconsulta la
+-- materializa primero y evita la restricción.
+INSERT IGNORE INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
+VALUES ('1000000002', 'Carlos Pérez', 'Carrera 8 # 12-45', '3007654321',
+        (SELECT `Cliente_ID` FROM (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001') AS `aval`));
 
--- -------------------------------------------------------------------------------------
--- Tabla: ejemplar
--- -------------------------------------------------------------------------------------
--- Cada película puede tener uno o varios ejemplares físicos con su propio estado.
-INSERT INTO `ejemplar` (`Numero`, `Pelicula_ID`, `Estado_ID`) VALUES
-    (1, 1, 2),  -- Ejemplar_ID = 1, Quo Vadis, Bueno
-    (2, 1, 3),  -- Ejemplar_ID = 2, Quo Vadis, Regular
-    (1, 2, 1),  -- Ejemplar_ID = 3, Todo sobre mi madre, Nuevo
-    (1, 3, 1),  -- Ejemplar_ID = 4, Interstellar, Nuevo
-    (2, 3, 2),  -- Ejemplar_ID = 5, Interstellar, Bueno
-    (1, 4, 2);  -- Ejemplar_ID = 6, El quinto elemento, Bueno
+INSERT IGNORE INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
+VALUES ('1000000003', 'María Rodríguez', 'Av. Siempre Viva 742', '3009876543',
+        (SELECT `Cliente_ID` FROM (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001') AS `aval`));
 
--- -------------------------------------------------------------------------------------
--- Tabla: renta
--- -------------------------------------------------------------------------------------
--- Encabezados de alquiler: la primera renta sigue activa (Termina = NULL).
-INSERT INTO `renta` (`Cliente_ID`, `Inicia`, `Termina`) VALUES
-    (1, '2024-05-01', NULL),          -- Renta_ID = 1, Laura, activa
-    (2, '2024-05-02', '2024-05-05'),  -- Renta_ID = 2, Carlos, devuelta
-    (3, '2024-05-03', NULL);          -- Renta_ID = 3, María, activa
+INSERT IGNORE INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
+VALUES ('1000000004', 'Andrés Torres', 'Diagonal 45 # 9-10', '3004561234',
+        (SELECT `Cliente_ID` FROM (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000002') AS `aval`));
 
 -- -------------------------------------------------------------------------------------
--- Tabla: ejemplar_renta
+-- Tabla: ejemplar (UNIQUE en Pelicula_ID+Numero -> INSERT IGNORE es suficiente)
 -- -------------------------------------------------------------------------------------
--- Detalle de qué ejemplares se llevó cada renta; Entrega NULL indica que el ejemplar
--- aún no ha sido devuelto físicamente.
-INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`, `Entrega`) VALUES
-    (1, 1, NULL),           -- Laura se llevó el ejemplar 1 de Quo Vadis (pendiente)
-    (1, 4, NULL),           -- Laura también se llevó Interstellar ejemplar 1 (pendiente)
-    (2, 3, '2024-05-05'),   -- Carlos devolvió Todo sobre mi madre
-    (3, 6, NULL);           -- María se llevó El quinto elemento (pendiente)
+INSERT IGNORE INTO `ejemplar` (`Numero`, `Pelicula_ID`, `Estado_ID`) VALUES
+    (1, (SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Quo Vadis' AND `Anio` = 1951),
+        (SELECT `Estado_ID` FROM `estado` WHERE `Nombre` = 'Bueno')),
+    (2, (SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Quo Vadis' AND `Anio` = 1951),
+        (SELECT `Estado_ID` FROM `estado` WHERE `Nombre` = 'Regular')),
+    (1, (SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Todo sobre mi madre' AND `Anio` = 1999),
+        (SELECT `Estado_ID` FROM `estado` WHERE `Nombre` = 'Nuevo')),
+    (1, (SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Interstellar' AND `Anio` = 2014),
+        (SELECT `Estado_ID` FROM `estado` WHERE `Nombre` = 'Nuevo')),
+    (2, (SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'Interstellar' AND `Anio` = 2014),
+        (SELECT `Estado_ID` FROM `estado` WHERE `Nombre` = 'Bueno')),
+    (1, (SELECT `Pelicula_ID` FROM `pelicula` WHERE `Titulo` = 'El quinto elemento' AND `Anio` = 1997),
+        (SELECT `Estado_ID` FROM `estado` WHERE `Nombre` = 'Bueno'));
+
+-- -------------------------------------------------------------------------------------
+-- Tabla: renta (sin UNIQUE natural -> se protege con WHERE NOT EXISTS sobre
+-- Cliente_ID + Inicia, que identifica de forma única cada renta de este conjunto de
+-- datos de ejemplo).
+-- -------------------------------------------------------------------------------------
+INSERT INTO `renta` (`Cliente_ID`, `Inicia`, `Termina`)
+SELECT (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001'), '2024-05-01', NULL
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM `renta`
+    WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001')
+      AND `Inicia` = '2024-05-01'
+);
+
+INSERT INTO `renta` (`Cliente_ID`, `Inicia`, `Termina`)
+SELECT (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000002'), '2024-05-02', '2024-05-05'
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM `renta`
+    WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000002')
+      AND `Inicia` = '2024-05-02'
+);
+
+INSERT INTO `renta` (`Cliente_ID`, `Inicia`, `Termina`)
+SELECT (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000003'), '2024-05-03', NULL
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM `renta`
+    WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000003')
+      AND `Inicia` = '2024-05-03'
+);
+
+-- -------------------------------------------------------------------------------------
+-- Tabla: ejemplar_renta (UNIQUE en Renta_ID+Ejemplar_ID, pero con trigger de negocio
+-- -> se protege con WHERE NOT EXISTS en vez de INSERT IGNORE, para que un intento de
+-- inserción duplicada ni siquiera llegue a evaluar el trigger trg_ejemplar_renta_max_4).
+-- Entrega NULL indica que el ejemplar aún no ha sido devuelto físicamente.
+-- -------------------------------------------------------------------------------------
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`, `Entrega`)
+SELECT
+    (SELECT `Renta_ID` FROM `renta`
+      WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001') AND `Inicia` = '2024-05-01'),
+    (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+      WHERE p.`Titulo` = 'Quo Vadis' AND p.`Anio` = 1951 AND e.`Numero` = 1),
+    NULL
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM `ejemplar_renta`
+    WHERE `Renta_ID` = (SELECT `Renta_ID` FROM `renta`
+                          WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001') AND `Inicia` = '2024-05-01')
+      AND `Ejemplar_ID` = (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+                             WHERE p.`Titulo` = 'Quo Vadis' AND p.`Anio` = 1951 AND e.`Numero` = 1)
+);
+
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`, `Entrega`)
+SELECT
+    (SELECT `Renta_ID` FROM `renta`
+      WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001') AND `Inicia` = '2024-05-01'),
+    (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+      WHERE p.`Titulo` = 'Interstellar' AND p.`Anio` = 2014 AND e.`Numero` = 1),
+    NULL
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM `ejemplar_renta`
+    WHERE `Renta_ID` = (SELECT `Renta_ID` FROM `renta`
+                          WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000001') AND `Inicia` = '2024-05-01')
+      AND `Ejemplar_ID` = (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+                             WHERE p.`Titulo` = 'Interstellar' AND p.`Anio` = 2014 AND e.`Numero` = 1)
+);
+
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`, `Entrega`)
+SELECT
+    (SELECT `Renta_ID` FROM `renta`
+      WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000002') AND `Inicia` = '2024-05-02'),
+    (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+      WHERE p.`Titulo` = 'Todo sobre mi madre' AND p.`Anio` = 1999 AND e.`Numero` = 1),
+    '2024-05-05'
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM `ejemplar_renta`
+    WHERE `Renta_ID` = (SELECT `Renta_ID` FROM `renta`
+                          WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000002') AND `Inicia` = '2024-05-02')
+      AND `Ejemplar_ID` = (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+                             WHERE p.`Titulo` = 'Todo sobre mi madre' AND p.`Anio` = 1999 AND e.`Numero` = 1)
+);
+
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`, `Entrega`)
+SELECT
+    (SELECT `Renta_ID` FROM `renta`
+      WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000003') AND `Inicia` = '2024-05-03'),
+    (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+      WHERE p.`Titulo` = 'El quinto elemento' AND p.`Anio` = 1997 AND e.`Numero` = 1),
+    NULL
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM `ejemplar_renta`
+    WHERE `Renta_ID` = (SELECT `Renta_ID` FROM `renta`
+                          WHERE `Cliente_ID` = (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = '1000000003') AND `Inicia` = '2024-05-03')
+      AND `Ejemplar_ID` = (SELECT `Ejemplar_ID` FROM `ejemplar` e INNER JOIN `pelicula` p ON p.`Pelicula_ID` = e.`Pelicula_ID`
+                             WHERE p.`Titulo` = 'El quinto elemento' AND p.`Anio` = 1997 AND e.`Numero` = 1)
+);

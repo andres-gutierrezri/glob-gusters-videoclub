@@ -20,6 +20,13 @@
 --
 -- El resultado final es una tabla con una fila por prueba (PASS/FAIL) y un resumen
 -- con el total de pruebas aprobadas y fallidas.
+--
+-- EJECUCIÓN SEGURA / IDEMPOTENCIA:
+--   Este script puede ejecutarse varias veces seguidas sin dejar residuos: cada
+--   prueba que inserta datos (cliente/renta/ejemplar_renta de prueba) primero borra
+--   cualquier resto de una corrida anterior interrumpida antes de insertar, y limpia
+--   lo que generó al final. La tabla `test_results` es TEMPORARY (vive sólo en la
+--   sesión actual) y se elimina explícitamente al terminar.
 -- =====================================================================================
 
 USE `glob_gusters`;
@@ -119,6 +126,10 @@ WHERE c.`Cliente_ID` IS NULL;
 -- El INSERT siguiente debe fallar (se requiere ejecutar este script con --force para
 -- que la conexión continúe después del error esperado).
 -- ---------------------------------------------------------------------------------
+-- Limpieza previa por si una corrida anterior fue interrumpida antes de su propia
+-- limpieza y dejó este registro de prueba a medio insertar.
+DELETE FROM `cliente` WHERE `Cliente_ID` = 999001;
+
 INSERT INTO `cliente` (`Cliente_ID`, `Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
 VALUES (999001, 'TEST-AVAL-001', 'Cliente Prueba Aval', 'Dirección de prueba', '0000000000', 999001);
 
@@ -136,6 +147,17 @@ DELETE FROM `cliente` WHERE `Cliente_ID` = 999001;
 -- PRUEBA 7: el trigger de máximo 4 ejemplares activos rechaza el quinto préstamo
 -- simultáneo de un mismo cliente. Usa los primeros 5 ejemplares existentes.
 -- ---------------------------------------------------------------------------------
+-- Limpieza previa por si una corrida anterior fue interrumpida antes de su propia
+-- limpieza (evita que el INSERT falle por Dni duplicado en vez de probar el trigger).
+DELETE er FROM `ejemplar_renta` er
+INNER JOIN `renta` r ON r.`Renta_ID` = er.`Renta_ID`
+INNER JOIN `cliente` c ON c.`Cliente_ID` = r.`Cliente_ID`
+WHERE c.`Dni` = 'TEST-MAX4-001';
+DELETE r FROM `renta` r
+INNER JOIN `cliente` c ON c.`Cliente_ID` = r.`Cliente_ID`
+WHERE c.`Dni` = 'TEST-MAX4-001';
+DELETE FROM `cliente` WHERE `Dni` = 'TEST-MAX4-001';
+
 INSERT INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
 VALUES ('TEST-MAX4-001', 'Cliente Prueba Max4', 'Dirección de prueba', '0000000000', NULL);
 SET @cliente_max4 = LAST_INSERT_ID();
@@ -171,6 +193,10 @@ DELETE FROM `cliente` WHERE `Cliente_ID` = @cliente_max4;
 -- PRUEBA 8: la restricción CHECK de renta rechaza una fecha de devolución anterior
 -- a la fecha de inicio del alquiler.
 -- ---------------------------------------------------------------------------------
+-- Limpieza previa por si una corrida anterior fue interrumpida antes de su propia
+-- limpieza y dejó este registro de prueba a medio insertar.
+DELETE FROM `renta` WHERE `Inicia` = '2024-06-10' AND `Termina` = '2024-06-01';
+
 INSERT INTO `renta` (`Cliente_ID`, `Inicia`, `Termina`)
 SELECT `Cliente_ID`, '2024-06-10', '2024-06-01' FROM `cliente` ORDER BY `Cliente_ID` LIMIT 1;
 

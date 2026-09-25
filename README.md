@@ -206,6 +206,28 @@ run_mariadb < sql/mariadb/commands/06_TCL.sql       # 8. START TRANSACTION / SAV
 > funciona igual que en macOS/Linux:
 > `C:\xampp\mysql\bin\mariadb.exe -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < sql\mariadb\glob_gusters.sql`
 
+#### Ejecución segura: se puede repetir y desordenar sin miedo
+
+Todos los scripts del proyecto están diseñados para ejecutarse **varias veces y en
+secuencias no lineales** sin generar errores ni datos duplicados:
+
+- Toda `CREATE DATABASE`, `CREATE TABLE`, `CREATE TRIGGER`, `ADD COLUMN` y
+  `CREATE INDEX` usa `IF [NOT] EXISTS`.
+- `glob_gusters_insert.sql` localiza cada llave foránea por su nombre natural (país,
+  título+año, DNI, etc.) en vez de un ID numérico fijo, y protege cada fila con
+  `INSERT IGNORE` (tablas con `UNIQUE`) o `WHERE NOT EXISTS` (tablas sin `UNIQUE`
+  natural, como `director`/`actor`, o con trigger de negocio, como `ejemplar_renta`).
+- `02_DML.sql` y `06_TCL.sql` localizan sus registros por llave natural y verifican
+  si el dato de ejemplo ya existe antes de insertarlo, para no acumular préstamos
+  activos y terminar chocando con el trigger de máximo 4 ejemplares.
+- `03_DQL.sql` y `04_VDL.sql` son de sólo lectura o usan `CREATE OR REPLACE VIEW`.
+- `05_DCL.sql` usa `CREATE USER IF NOT EXISTS`; repetir el `GRANT`/`REVOKE` no falla.
+
+Esto se validó ejecutando los 8 scripts tres veces seguidas sin recrear la base de
+datos, y en una secuencia desordenada con repeticiones (`05 → 01 → 05 → insert →
+06 → 06 → 02 → 02 → glob_gusters.sql → 04 → 03`): en ambos casos, cero errores y los
+mismos conteos de filas en todas las tablas.
+
 ### 4. Verificar la instalación desde phpMyAdmin (opcional)
 
 1. Abre `http://localhost/phpmyadmin` con XAMPP en ejecución.
