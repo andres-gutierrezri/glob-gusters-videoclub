@@ -290,6 +290,35 @@ git remote add origin https://github.com/<usuario>/glob-gusters-videoclub.git
 git push -u origin main
 ```
 
+## Protección de la rama `main`
+
+La rama `main` de este repositorio tiene activada la protección de rama de GitHub,
+con la siguiente configuración:
+
+| Regla | Estado |
+|---|---|
+| Requiere Pull Request para fusionar cambios | ✅ Activado |
+| Aprobaciones mínimas por PR | **1** |
+| Se aplica también al propietario/administrador | ❌ Desactivado |
+| Permite `force-push` a `main` | ❌ Bloqueado |
+| Permite eliminar la rama `main` | ❌ Bloqueado |
+
+En la práctica, esto significa:
+
+- **El propietario del repositorio** conserva permiso para hacer `git push` directo
+  a `main`, sin necesidad de abrir un Pull Request.
+- **Cualquier otro colaborador** (sin permisos de administrador) que quiera
+  modificar el proyecto o agregar una nueva funcionalidad debe crear una rama,
+  subir sus cambios y abrir un Pull Request contra `main`; ese PR necesita al menos
+  **una aprobación humana** antes de poder fusionarse.
+
+Esta configuración se administra desde **Settings → Branches → Branch protection
+rules** en GitHub, o mediante la API:
+
+```bash
+gh api repos/<usuario>/glob-gusters-videoclub/branches/main/protection
+```
+
 ## Licencia
 
 Este proyecto se distribuye bajo licencia MIT. Véase el archivo [LICENSE](LICENSE).
