@@ -137,12 +137,27 @@ mariadb --version
 mariadb --version
 ```
 
-También puedes usar el script de diagnóstico incluido en el proyecto para confirmar
-versión, puerto, configuración y estado del servidor antes de continuar (ajusta la
-ruta del binario según tu sistema operativo, como en el paso 3). Usa **`--force`**:
-al ejecutarse antes de crear la base de datos del proyecto, algunas de sus secciones
-esperan que `glob_gusters` todavía no exista (ver los comentarios al inicio del
-script para el detalle de cada caso), y sin `--force` el cliente se detendría ahí.
+También puedes usar el script de diagnóstico incluido en el proyecto,
+`sql/mariadb/check-mariadb.sql`, para confirmar de un vistazo:
+
+- Versión, host y puerto del servidor.
+- Sesión actual (usuario autenticado, base de datos seleccionada) y procesos
+  activos.
+- Estado del servidor (uptime, conexiones, consultas totales) y configuración
+  relevante (charset, collation, `sql_mode`).
+- Motores de almacenamiento disponibles (confirma que InnoDB, requerido por el
+  proyecto, esté activo).
+- Tablas, vistas y triggers ya creados en `glob_gusters`, y un resumen de filas
+  por tabla.
+- Usuarios del servidor y su estado de seguridad, sin exponer contraseñas.
+
+Ajusta la ruta del binario según tu sistema operativo (como en el paso 3) y usa
+siempre **`--force`**: el script está pensado para poder correrse en cualquier
+momento (incluso antes de crear la base de datos del proyecto), y algunas de sus
+secciones esperan condiciones que pueden no cumplirse todavía —por ejemplo, que
+`glob_gusters` ya exista, o que el *event scheduler* esté activo—; sin `--force`
+el cliente se detendría en la primera de ellas. El encabezado del script documenta
+las tres limitaciones conocidas del entorno y por qué no son errores del proyecto.
 
 ```bash
 mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
