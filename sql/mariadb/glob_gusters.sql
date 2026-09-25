@@ -19,6 +19,12 @@
 --   3FN: no existen dependencias transitivas; los atributos no clave de cada tabla
 --        dependen únicamente de su llave primaria (p.e. la nacionalidad de un actor
 --        no depende del actor sino de la entidad NACIONALIDAD referenciada por FK).
+--
+-- EJECUCIÓN SEGURA / IDEMPOTENCIA:
+--   Todo el script puede ejecutarse varias veces seguidas, o después de que las
+--   tablas ya existan, sin error: CREATE DATABASE, cada CREATE TABLE y cada
+--   CREATE TRIGGER usan IF NOT EXISTS. Si el esquema ya está creado, el script no
+--   hace nada y termina sin fallar.
 -- =====================================================================================
 
 -- Crea la base de datos si no existe, con soporte completo para UTF-8 (emojis incluidos).

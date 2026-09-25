@@ -6,6 +6,11 @@
 -- CÓMO SE EJECUTA:
 --   Debe correrse DESPUÉS de 03_DQL.sql, cuando ya se confirmó que los datos base
 --   son correctos. Las vistas se apoyan en las tablas pelicula, ejemplar y estado.
+--
+-- EJECUCIÓN SEGURA / IDEMPOTENCIA:
+--   Ambas vistas se definen con CREATE OR REPLACE VIEW, por lo que ejecutarlo varias
+--   veces simplemente vuelve a definir la misma vista sin error. Los SELECT son de
+--   sólo lectura y el DROP VIEW usa IF EXISTS (queda comentado por defecto).
 -- =====================================================================================
 
 USE `glob_gusters`;
