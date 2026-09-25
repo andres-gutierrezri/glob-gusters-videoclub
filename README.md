@@ -154,8 +154,12 @@ mysql -u root -p < sql/mariadb/commands/06_TCL.sql
 1. Abre `http://localhost/phpmyadmin` con XAMPP en ejecución.
 2. Selecciona la base de datos `glob_gusters` en el panel izquierdo.
 3. Confirma que existan las 11 tablas del modelo, las vistas `v_ejemplares_detalle` y
-   `v_clientes_con_aval`, y que la pestaña **Triggers** de `ejemplar_renta` muestre
-   `trg_ejemplar_renta_max_4`.
+   `v_clientes_con_aval`, y que la pestaña **Triggers** muestre los tres disparadores
+   de reglas de negocio:
+   - `trg_ejemplar_renta_max_4` (en `ejemplar_renta`): máximo 4 ejemplares activos
+     por socio.
+   - `trg_cliente_aval_diferente_insert` y `trg_cliente_aval_diferente_update` (en
+     `cliente`): un socio no puede ser su propio aval.
 
 ## Cómo subir este proyecto a GitHub
 
