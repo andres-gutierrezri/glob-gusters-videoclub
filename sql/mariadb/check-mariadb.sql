@@ -3,8 +3,8 @@
 --
 -- Diagnóstico del servidor MariaDB de XAMPP antes (o en cualquier momento) de
 -- ejecutar el resto de scripts del proyecto: versión, conexión, estado del
--- servidor, configuración, motores de almacenamiento, objetos definidos, usuarios
--- y, al final, el estado específico de la base de datos `glob_gusters`.
+-- servidor, configuración, motores de almacenamiento, cuentas de usuario y, en la
+-- parte final, los objetos y datos específicos de la base de datos `glob_gusters`.
 --
 -- EJECUCIÓN SEGURA / IDEMPOTENCIA:
 --   Todo el script es de sólo lectura (SELECT/SHOW): no modifica nada, así que se
@@ -117,7 +117,20 @@ SHOW VARIABLES;
 SHOW ENGINES;
 
 -- ---------------------------------------------------------------------------------
--- SECCIÓN 6: Objetos definidos en la base de datos del proyecto.
+-- SECCIÓN 6: Usuarios del servidor.
+-- No depende de mysql.proc ni de la base de datos del proyecto: User, Host y
+-- plugin existen en mysql.user desde versiones muy antiguas de MySQL/MariaDB, así
+-- que esta consulta es segura incluso si las tablas de sistema no se actualizaron.
+-- ---------------------------------------------------------------------------------
+
+-- Cuentas del servidor con su host de origen y el plugin de autenticación que
+-- usan. Deliberadamente NO se usa SELECT * FROM mysql.user, porque esa tabla
+-- incluye la columna authentication_string (el hash de la contraseña); listar
+-- sólo estas columnas evita exponerlo en la salida del script.
+SELECT host, user, plugin FROM mysql.user;
+
+-- ---------------------------------------------------------------------------------
+-- SECCIÓN 7: Objetos definidos en la base de datos del proyecto.
 -- Requiere que `glob_gusters` ya exista (ejecutar primero sql/mariadb/glob_gusters.sql).
 -- ---------------------------------------------------------------------------------
 
@@ -144,7 +157,7 @@ SHOW TRIGGERS;
 SHOW EVENTS;
 
 -- ---------------------------------------------------------------------------------
--- SECCIÓN 7: Estado específico del proyecto Glob-Gusters.
+-- SECCIÓN 8: Estado específico del proyecto Glob-Gusters.
 -- ---------------------------------------------------------------------------------
 
 -- Confirma en information_schema si la base de datos del proyecto existe (devuelve
@@ -163,16 +176,6 @@ WHERE table_schema = 'glob_gusters'
 ORDER BY table_name;
 
 -- ---------------------------------------------------------------------------------
--- SECCIÓN 8: Usuarios y seguridad (metadatos básicos, siempre disponibles).
--- ---------------------------------------------------------------------------------
-
--- Lista básica de cuentas de usuario, desde qué host pueden conectarse y con qué
--- método de autenticación (User, Host y plugin existen en mysql.user desde
--- versiones muy antiguas de MySQL/MariaDB, así que esta consulta es segura incluso
--- si las tablas de sistema no se actualizaron).
-SELECT user, host, plugin FROM mysql.user;
-
--- ---------------------------------------------------------------------------------
 -- SECCIÓN 9: Objetos que dependen de la tabla de sistema mysql.proc,
 -- potencialmente desactualizada. Puede fallar con ERROR 1558 en instalaciones de
 -- XAMPP sin mysql_upgrade (ver nota al inicio del script); se deja al final para
@@ -188,10 +191,3 @@ SHOW FUNCTION STATUS;
 
 -- Detalle crudo de rutinas (procedimientos y funciones) vía information_schema.
 SELECT * FROM information_schema.routines LIMIT 10;
-
--- Lista de cuentas del servidor con su host de origen y el plugin de
--- autenticación que usan. Deliberadamente NO se usa SELECT * FROM mysql.user,
--- porque esa tabla incluye la columna authentication_string (el hash de la
--- contraseña); listar sólo estas columnas evita exponerlo en la salida del script.
-SELECT host, user, plugin FROM mysql.user;
-
