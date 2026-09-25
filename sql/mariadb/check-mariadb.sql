@@ -24,19 +24,16 @@
 --      del proyecto (que no usa eventos); activar el planificador con
 --      `SET GLOBAL event_scheduler = ON;` es opcional y no es necesario para nada
 --      de este proyecto.
---   3) La última sección del script (objetos y metadatos de mysql.*) lee las
---      tablas de sistema mysql.proc y mysql.user. En una instalación de XAMPP
---      donde el mysqld se reemplazó por una versión más nueva sin correr
---      mysql_upgrade, esas tablas quedan con una estructura desactualizada:
---      SHOW PROCEDURE STATUS / SHOW FUNCTION STATUS / information_schema.routines
---      fallan con "ERROR 1558: Column count of mysql.proc is wrong... Please use
---      mysql_upgrade to fix this error", y una consulta a columnas de mysql.user
---      como account_locked (agregada en MariaDB 10.4.3) puede fallar con
---      "ERROR 1054: Unknown column 'account_locked'" si esa tabla tampoco se
---      actualizó. La solución real es ejecutar `mysql_upgrade` (normalmente
---      requiere permisos de administrador/sudo sobre el directorio de datos de
---      MariaDB); si no se puede o no se quiere tocar el entorno, usa --force para
---      que el script reporte todo lo demás igual.
+--   3) La última sección del script lee la tabla de sistema mysql.proc. En una
+--      instalación de XAMPP donde el mysqld se reemplazó por una versión más
+--      nueva sin correr mysql_upgrade, esa tabla queda con una estructura
+--      desactualizada: SHOW PROCEDURE STATUS / SHOW FUNCTION STATUS /
+--      information_schema.routines fallan con "ERROR 1558: Column count of
+--      mysql.proc is wrong... Please use mysql_upgrade to fix this error". La
+--      solución real es ejecutar `mysql_upgrade` (normalmente requiere permisos
+--      de administrador/sudo sobre el directorio de datos de MariaDB); si no se
+--      puede o no se quiere tocar el entorno, usa --force para que el script
+--      reporte todo lo demás igual.
 --
 --   Ejemplo de ejecución que nunca se detiene por estas tres limitaciones:
 --     mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
@@ -176,10 +173,10 @@ ORDER BY table_name;
 SELECT user, host, plugin FROM mysql.user;
 
 -- ---------------------------------------------------------------------------------
--- SECCIÓN 9: Objetos y metadatos que dependen de tablas de sistema mysql.*
--- potencialmente desactualizadas. Puede fallar con ERROR 1558 / ERROR 1054 en
--- instalaciones de XAMPP sin mysql_upgrade (ver nota al inicio del script); se
--- deja al final para no bloquear el resto del reporte.
+-- SECCIÓN 9: Objetos que dependen de la tabla de sistema mysql.proc,
+-- potencialmente desactualizada. Puede fallar con ERROR 1558 en instalaciones de
+-- XAMPP sin mysql_upgrade (ver nota al inicio del script); se deja al final para
+-- no bloquear el resto del reporte.
 -- ---------------------------------------------------------------------------------
 
 -- Procedimientos almacenados definidos en el servidor (el proyecto no usa ninguno
@@ -192,12 +189,9 @@ SHOW FUNCTION STATUS;
 -- Detalle crudo de rutinas (procedimientos y funciones) vía information_schema.
 SELECT * FROM information_schema.routines LIMIT 10;
 
--- Detalle de seguridad de cada cuenta: si está bloqueada, si su contraseña
--- expiró y cuándo cambió por última vez. Requiere columnas agregadas en
--- MariaDB 10.4.3 (account_locked, password_last_changed); si mysql.user no se
--- actualizó junto con el servidor, esta consulta falla con "ERROR 1054: Unknown
--- column". Deliberadamente NO se usa SELECT * FROM mysql.user, porque esa tabla
--- incluye la columna authentication_string (el hash de la contraseña); listar
--- sólo estas columnas evita exponerlo en la salida del script.
-SELECT user, host, account_locked, password_expired, password_last_changed
-FROM mysql.user;
+-- Lista de cuentas del servidor con su host de origen y el plugin de
+-- autenticación que usan. Deliberadamente NO se usa SELECT * FROM mysql.user,
+-- porque esa tabla incluye la columna authentication_string (el hash de la
+-- contraseña); listar sólo estas columnas evita exponerlo en la salida del script.
+SELECT host, user, plugin FROM mysql.user;
+
