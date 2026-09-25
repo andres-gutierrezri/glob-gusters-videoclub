@@ -7,6 +7,12 @@
 --   Debe correrse DESPUÉS de sql/mariadb/glob_gusters.sql (las tablas base ya deben
 --   existir) y ANTES de 02_DML.sql, porque aquí se agregan columnas que los scripts
 --   siguientes van a utilizar.
+--
+-- EJECUCIÓN SEGURA / IDEMPOTENCIA:
+--   Todas las sentencias usan IF [NOT] EXISTS (CREATE TABLE, ADD COLUMN, CREATE INDEX,
+--   DROP TABLE), por lo que este script puede ejecutarse varias veces seguidas sin
+--   error: si la columna, el índice o la tabla ya existen, la sentencia simplemente no
+--   hace nada en vez de fallar.
 -- =====================================================================================
 
 -- Selecciona el esquema del proyecto como base de datos activa.
@@ -31,14 +37,14 @@ CREATE TABLE IF NOT EXISTS `tabla_prueba` (
 -- electrónico del socio (dato que no estaba contemplado en el modelo original).
 -- ---------------------------------------------------------------------------------
 ALTER TABLE `cliente`
-    ADD COLUMN `Email` VARCHAR(120) NULL
+    ADD COLUMN IF NOT EXISTS `Email` VARCHAR(120) NULL
     COMMENT 'Correo electrónico de contacto del socio (opcional).';
 
 -- ---------------------------------------------------------------------------------
 -- ALTER: agrega una columna a `pelicula` para registrar la duración en minutos.
 -- ---------------------------------------------------------------------------------
 ALTER TABLE `pelicula`
-    ADD COLUMN `Duracion_Minutos` SMALLINT UNSIGNED NULL
+    ADD COLUMN IF NOT EXISTS `Duracion_Minutos` SMALLINT UNSIGNED NULL
     COMMENT 'Duración de la película en minutos.';
 
 -- ---------------------------------------------------------------------------------
@@ -53,7 +59,7 @@ ALTER TABLE `cliente`
 -- CREATE INDEX: crea un índice sobre `pelicula.Titulo` para acelerar las búsquedas
 -- de películas por título, operación muy frecuente en el negocio.
 -- ---------------------------------------------------------------------------------
-CREATE INDEX `idx_pelicula_titulo` ON `pelicula` (`Titulo`);
+CREATE INDEX IF NOT EXISTS `idx_pelicula_titulo` ON `pelicula` (`Titulo`);
 
 -- ---------------------------------------------------------------------------------
 -- DROP: elimina la tabla de prueba creada al inicio del script, ya que sólo servía
