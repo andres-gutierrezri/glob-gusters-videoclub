@@ -138,11 +138,15 @@ mariadb --version
 ```
 
 También puedes usar el script de diagnóstico incluido en el proyecto para confirmar
-versión, puerto y estado del servidor antes de continuar (ajusta la ruta del binario
-según tu sistema operativo, como en el paso 3):
+versión, puerto, configuración y estado del servidor antes de continuar (ajusta la
+ruta del binario según tu sistema operativo, como en el paso 3). Usa **`--force`**:
+al ejecutarse antes de crear la base de datos del proyecto, algunas de sus secciones
+esperan que `glob_gusters` todavía no exista (ver los comentarios al inicio del
+script para el detalle de cada caso), y sin `--force` el cliente se detendría ahí.
 
 ```bash
-mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < sql/mariadb/check-mariadb.sql
+mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
+    --force < sql/mariadb/check-mariadb.sql
 ```
 
 ### 3. Ejecutar los scripts en orden
