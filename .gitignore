@@ -1,8 +1,9 @@
 # Configuración local / entorno
 .env
 *.log
-# Excepción: los registros de ejecución del proyecto sí se versionan.
-!logs/**/*.log
+
+# Registros de ejecución del proyecto (no se versionan)
+/logs/
 
 # XAMPP / MySQL
 *.ibd

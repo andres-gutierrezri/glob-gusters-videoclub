@@ -72,8 +72,6 @@ glob-gusters-videoclub/
 ├── tests/
 │   └── mariadb/
 │       └── glob_gusters_test.sql        # Pruebas de integridad integral del proyecto
-├── logs/
-│   └── <fecha>_ejecucion-completa/      # Registros de cada ejecución completa del proyecto
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -186,13 +184,6 @@ con el total de pruebas aprobadas. El script no requiere procedimientos almacena
 por lo que funciona incluso en instalaciones de XAMPP con la tabla de sistema
 `mysql.proc` desactualizada (un problema común al reemplazar el `mysqld` incluido por
 una versión más reciente sin ejecutar `mysql_upgrade`).
-
-### Registros de ejecución
-
-Cada corrida completa del proyecto (los ocho scripts más las pruebas de integridad)
-queda documentada en `logs/<fecha>_ejecucion-completa/`, con un log por script y un
-`00_resumen.log` que indica el código de salida de cada paso y cualquier incidencia
-detectada y corregida durante esa ejecución.
 
 ## Cómo subir este proyecto a GitHub
 
