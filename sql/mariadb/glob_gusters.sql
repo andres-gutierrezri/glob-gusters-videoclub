@@ -276,7 +276,7 @@ CREATE TABLE IF NOT EXISTS `ejemplar_renta` (
 -- =====================================================================================
 DELIMITER $$
 
-CREATE TRIGGER `trg_cliente_aval_diferente_insert`
+CREATE TRIGGER IF NOT EXISTS `trg_cliente_aval_diferente_insert`
 BEFORE INSERT ON `cliente`
 FOR EACH ROW
 BEGIN
@@ -286,7 +286,7 @@ BEGIN
     END IF;
 END$$
 
-CREATE TRIGGER `trg_cliente_aval_diferente_update`
+CREATE TRIGGER IF NOT EXISTS `trg_cliente_aval_diferente_update`
 BEFORE UPDATE ON `cliente`
 FOR EACH ROW
 BEGIN
@@ -306,7 +306,7 @@ DELIMITER ;
 -- =====================================================================================
 DELIMITER $$
 
-CREATE TRIGGER `trg_ejemplar_renta_max_4`
+CREATE TRIGGER IF NOT EXISTS `trg_ejemplar_renta_max_4`
 BEFORE INSERT ON `ejemplar_renta`
 FOR EACH ROW
 BEGIN
