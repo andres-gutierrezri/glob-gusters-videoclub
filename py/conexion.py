@@ -7,6 +7,8 @@ Los valores por defecto son los de una instalación de XAMPP (root sin contrase�
 pueden cambiarse con variables de entorno, sin tocar el código:
     GLOB_GUSTERS_HOST, GLOB_GUSTERS_PORT, GLOB_GUSTERS_USER,
     GLOB_GUSTERS_PASSWORD, GLOB_GUSTERS_DB
+Si existe un archivo `.env` en la raíz del proyecto, se leen de ahí (las variables ya
+definidas en el sistema tienen prioridad). Plantilla: `.env.example`.
 
 Dependencia: pip install -r py/requirements.txt
 
@@ -16,9 +18,25 @@ Prueba rápida de la conexión:
 
 import os
 from contextlib import contextmanager
+from pathlib import Path
 
 import pymysql
 from pymysql.cursors import DictCursor
+
+
+def _cargar_env(ruta):
+    """Carga las líneas CLAVE=VALOR de `ruta` en os.environ sin pisar lo ya definido."""
+    if not ruta.is_file():
+        return
+    for linea in ruta.read_text(encoding="utf-8").splitlines():
+        linea = linea.strip()
+        if not linea or linea.startswith("#") or "=" not in linea:
+            continue
+        clave, valor = linea.removeprefix("export ").split("=", 1)
+        os.environ.setdefault(clave.strip(), valor.strip().strip("\"'"))
+
+
+_cargar_env(Path(__file__).resolve().parent.parent / ".env")
 
 CONFIG = {
     "host": os.getenv("GLOB_GUSTERS_HOST", "localhost"),

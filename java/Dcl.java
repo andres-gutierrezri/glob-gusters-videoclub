@@ -24,14 +24,9 @@ public class Dcl {
 
     static {
         USUARIOS.put("glob_gusters_reportes",
-                new Cuenta(env("GLOB_GUSTERS_PASS_REPORTES", "Reportes#2024"), "SELECT"));
+                new Cuenta(Conexion.env("GLOB_GUSTERS_PASS_REPORTES", "Reportes#2024"), "SELECT"));
         USUARIOS.put("glob_gusters_mostrador",
-                new Cuenta(env("GLOB_GUSTERS_PASS_MOSTRADOR", "Mostrador#2024"), "SELECT, INSERT, UPDATE"));
-    }
-
-    private static String env(String nombre, String defecto) {
-        String valor = System.getenv(nombre);
-        return valor == null ? defecto : valor;
+                new Cuenta(Conexion.env("GLOB_GUSTERS_PASS_MOSTRADOR", "Mostrador#2024"), "SELECT, INSERT, UPDATE"));
     }
 
     public static void main(String[] args) throws SQLException {

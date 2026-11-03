@@ -1,3 +1,6 @@
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -6,6 +9,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +23,8 @@ import java.util.Map;
  * pueden cambiarse con variables de entorno, sin tocar el código:
  *     GLOB_GUSTERS_HOST, GLOB_GUSTERS_PORT, GLOB_GUSTERS_USER,
  *     GLOB_GUSTERS_PASSWORD, GLOB_GUSTERS_DB
+ * Si existe un archivo `.env` en la raíz del proyecto, se leen de ahí (las variables ya
+ * definidas en el sistema tienen prioridad). Plantilla: `.env.example`.
  *
  * Dependencia: java/lib/mariadb-java-client-*.jar (ver README).
  *
@@ -27,15 +33,47 @@ import java.util.Map;
  */
 public class Conexion {
 
+    /** Variables leídas de .env (se declara antes que las constantes que la usan). */
+    private static final Map<String, String> ENV_ARCHIVO = cargarEnv();
+
     static final String HOST = env("GLOB_GUSTERS_HOST", "localhost");
     static final int PORT = Integer.parseInt(env("GLOB_GUSTERS_PORT", "3306"));
     static final String USER = env("GLOB_GUSTERS_USER", "root");
     static final String PASSWORD = env("GLOB_GUSTERS_PASSWORD", "");
     static final String DB = env("GLOB_GUSTERS_DB", "glob_gusters");
 
-    private static String env(String nombre, String defecto) {
+    /** Valor de una variable: primero el sistema, luego el archivo .env y por último el defecto. */
+    static String env(String nombre, String defecto) {
         String valor = System.getenv(nombre);
+        if (valor == null) {
+            valor = ENV_ARCHIVO.get(nombre);
+        }
         return valor == null ? defecto : valor;
+    }
+
+    /** Lee .env desde la raíz del proyecto (el directorio actual o su padre, si se ejecuta desde java/). */
+    private static Map<String, String> cargarEnv() {
+        Map<String, String> valores = new HashMap<>();
+        for (Path ruta : List.of(Path.of(".env"), Path.of("..", ".env"))) {
+            if (!Files.isRegularFile(ruta)) {
+                continue;
+            }
+            try {
+                for (String linea : Files.readAllLines(ruta)) {
+                    linea = linea.strip();
+                    int igual = linea.indexOf('=');
+                    if (linea.isEmpty() || linea.startsWith("#") || igual < 0) {
+                        continue;
+                    }
+                    String clave = linea.substring(0, igual).strip().replaceFirst("^export\\s+", "");
+                    valores.put(clave, linea.substring(igual + 1).strip().replaceAll("^[\"']|[\"']$", ""));
+                }
+            } catch (IOException error) {
+                System.err.println("No se pudo leer " + ruta + ": " + error.getMessage());
+            }
+            break;
+        }
+        return valores;
     }
 
     /** Abre una conexión nueva con la cuenta por defecto. */
