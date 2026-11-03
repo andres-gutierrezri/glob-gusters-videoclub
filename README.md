@@ -166,6 +166,8 @@ glob-gusters-videoclub/
 │   └── mariadb/
 │       └── glob_gusters_test.sql        # Pruebas de integridad integral del proyecto
 ├── logs/                                # Bitácoras de ejecución local (ignorada por Git)
+├── .env.example                         # Plantilla de variables de entorno (se versiona)
+├── .env                                 # Variables reales de conexión (local, ignorado por Git)
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -423,6 +425,31 @@ Orden de ejecución (obligatorio):
 01_DDL_oracle.sql → 02_DML_oracle.sql → 03_DQL_oracle.sql →
 04_VDL_oracle.sql → 05_DCL_oracle.sql → 06_TCL_oracle.sql
 ```
+
+## Configuración de la conexión (`.env`)
+
+Python y Java leen los datos de conexión de variables de entorno. Para no escribirlas en
+la terminal cada vez, ambos cargan automáticamente el archivo `.env` de la **raíz del
+proyecto**. Ese archivo es local y está en `.gitignore`, así que tu contraseña no se
+sube a GitHub; la plantilla versionada es `.env.example`:
+
+```bash
+cp .env.example .env      # y edita GLOB_GUSTERS_PASSWORD si tu root tiene contraseña
+```
+
+| Variable | Valor por defecto | Uso |
+|---|---|---|
+| `GLOB_GUSTERS_HOST` | `localhost` | Servidor MariaDB. |
+| `GLOB_GUSTERS_PORT` | `3306` | Puerto de conexión. |
+| `GLOB_GUSTERS_USER` | `root` | Usuario. |
+| `GLOB_GUSTERS_PASSWORD` | *(vacía)* | Contraseña del usuario. |
+| `GLOB_GUSTERS_DB` | `glob_gusters` | Base de datos. |
+| `GLOB_GUSTERS_PASS_REPORTES` | `Reportes#2024` | Clave de la cuenta de ejemplo que crean `dcl.py` / `Dcl`. |
+| `GLOB_GUSTERS_PASS_MOSTRADOR` | `Mostrador#2024` | Ídem para la cuenta de mostrador. |
+
+Formato: una línea `CLAVE=valor` por variable; se ignoran las líneas vacías y las que
+empiezan con `#`. Una variable ya definida en el sistema (`export GLOB_GUSTERS_PORT=...`)
+tiene prioridad sobre el `.env`. Si no hay `.env`, se usan los valores por defecto.
 
 ## Conexión y consultas desde Python
 
