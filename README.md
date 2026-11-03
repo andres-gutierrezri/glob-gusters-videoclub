@@ -49,32 +49,112 @@ El detalle completo de cada relación (tabla origen, campo FK, tabla destino, ca
 y cardinalidad) está documentado como bloque de comentarios dentro de
 `sql/mariadb/glob_gusters.sql`.
 
+### Estructura de las tablas
+
+PK = llave primaria, FK = llave foránea, UQ = restricción `UNIQUE`. Todas las llaves
+foráneas usan `ON UPDATE CASCADE`; para `ON DELETE` ver «Reglas de negocio e integridad».
+
+| Tabla | Columnas | Restricciones |
+|---|---|---|
+| `nacionalidad` | `Nacionalidad_ID`, `Nombre` VARCHAR(60) | PK; UQ `Nombre`. |
+| `productora` | `Productora_ID`, `Nombre` VARCHAR(100) | PK; UQ `Nombre`. |
+| `estado` | `Estado_ID`, `Nombre` VARCHAR(30) | PK; UQ `Nombre`. |
+| `director` | `Director_ID`, `Nombre` VARCHAR(100), `Nacionalidad_ID` | PK; FK → `nacionalidad`. |
+| `pelicula` | `Pelicula_ID`, `Titulo` VARCHAR(150), `Anio` YEAR, `Nacionalidad_ID`, `Productora_ID`, `Director_ID` | PK; UQ (`Titulo`, `Anio`); FK → `nacionalidad`, `productora`, `director`. |
+| `actor` | `Actor_ID`, `Nombre` VARCHAR(100), `Nacionalidad_ID`, `Sexo` ENUM('M','F') | PK; FK → `nacionalidad`. |
+| `reparto` | `Reparto_ID`, `Pelicula_ID`, `Actor_ID`, `Rol` ENUM('Principal','Secundario') | PK; UQ (`Pelicula_ID`, `Actor_ID`); FK → `pelicula`, `actor`. |
+| `cliente` | `Cliente_ID`, `Dni` VARCHAR(15), `Nombre` VARCHAR(100), `Direccion` VARCHAR(150), `Telefono` VARCHAR(20), `Aval_Cliente_ID` (nulo) | PK; UQ `Dni`; FK `Aval_Cliente_ID` → `cliente` (autorreferencia). |
+| `ejemplar` | `Ejemplar_ID`, `Numero`, `Pelicula_ID`, `Estado_ID` | PK; UQ (`Pelicula_ID`, `Numero`); FK → `pelicula`, `estado`. |
+| `renta` | `Renta_ID`, `Cliente_ID`, `Inicia` DATE, `Termina` DATE (nulo) | PK; FK → `cliente`; `CHECK (Termina IS NULL OR Termina >= Inicia)`. |
+| `ejemplar_renta` | `Ejemplar_Renta_ID`, `Renta_ID`, `Ejemplar_ID`, `Entrega` DATE (nulo) | PK; UQ (`Renta_ID`, `Ejemplar_ID`); FK → `renta`, `ejemplar`. |
+
+Los scripts `01_DDL.sql` y su equivalente agregan después `cliente.Email`,
+`pelicula.Duracion_Minutos`, amplían `cliente.Telefono` a `VARCHAR(25)` y crean el
+índice `idx_pelicula_titulo`.
+
+### Reglas de negocio e integridad
+
+| Regla | Cómo se aplica |
+|---|---|
+| Un socio no puede ser su propio aval. | Triggers `trg_cliente_aval_diferente_insert` y `trg_cliente_aval_diferente_update` (MariaDB no permite `CHECK` sobre una columna `AUTO_INCREMENT`). |
+| Un socio no puede tener más de 4 ejemplares sin devolver. | Trigger `trg_ejemplar_renta_max_4` en `ejemplar_renta`. |
+| La fecha de devolución no puede ser anterior a la de inicio. | `CHECK` `chk_renta_fechas` en `renta`. |
+| Un actor no se repite en la misma película; un ejemplar no se repite en la misma renta. | `UNIQUE` en `reparto` y `ejemplar_renta`. |
+| No se puede borrar un registro que otro todavía necesita (una nacionalidad, productora, director, estado, socio o ejemplar en uso, ni un socio que avala a otro). | `ON DELETE RESTRICT` en las 9 llaves foráneas hacia `nacionalidad`, `productora`, `director`, `estado`, `cliente` (renta y aval) y `ejemplar` (en `ejemplar_renta`). |
+| Al borrar un padre desaparecen sus detalles. | `ON DELETE CASCADE` en `reparto` (película y actor), `ejemplar` → `pelicula` y `ejemplar_renta` → `renta`. |
+
+Los triggers rechazan la operación con `SIGNAL SQLSTATE '45000'` y un mensaje
+descriptivo.
+
+### Vistas y usuarios de ejemplo
+
+| Objeto | Descripción |
+|---|---|
+| `v_ejemplares_detalle` | Ejemplares con título, año y estado de conservación. |
+| `v_clientes_con_aval` | Socios con el nombre de quien los avala (`LEFT JOIN`, el aval puede ser nulo). |
+| `glob_gusters_reportes`@`localhost` | Solo `SELECT` sobre `glob_gusters`. |
+| `glob_gusters_mostrador`@`localhost` | `SELECT`, `INSERT` y `UPDATE`; el `DELETE` se revoca para proteger el historial de rentas. |
+
+Las contraseñas de estos usuarios (`Reportes#2024` y `Mostrador#2024`) son solo de
+ejemplo para un entorno de práctica; cámbialas en cualquier uso real.
+
+### Datos de prueba
+
+`glob_gusters_insert.sql` carga datos de muestra en todas las tablas:
+
+| Tabla | Filas | Tabla | Filas |
+|---|---|---|---|
+| `nacionalidad` | 5 | `cliente` | 5 |
+| `productora` | 4 | `ejemplar` | 6 |
+| `estado` | 4 | `renta` | 4 |
+| `director` | 4 | `ejemplar_renta` | 5 |
+| `pelicula` | 4 | `reparto` | 5 |
+| `actor` | 6 | | |
+
+## Especificaciones del proyecto
+
+| Aspecto | Detalle |
+|---|---|
+| Motor principal | MariaDB (XAMPP). Verificado con MariaDB 10.4.28. |
+| Motor alternativo | Oracle Database 12c o superior (Oracle APEX), en `sql/oracle_apex/`. |
+| Base de datos | `glob_gusters`, con juego de caracteres `utf8mb4` y collation `utf8mb4_general_ci`. |
+| Motor de almacenamiento | InnoDB (necesario para llaves foráneas y transacciones). |
+| Puerto de conexión | **3307** (en las variables de entorno `GLOB_GUSTERS_PORT` se puede cambiar). |
+| Usuario por defecto | `root` sin contraseña (valor de XAMPP; ajústalo si tu servidor la exige). |
+| Objetos | 11 tablas, 2 vistas, 3 triggers, 2 usuarios de ejemplo y 1 índice adicional. |
+| Normalización | Tercera Forma Normal (3FN). |
+| Pruebas | 23 pruebas automáticas en `tests/mariadb/glob_gusters_test.sql`. |
+| Lenguajes de acceso | SQL, Python 3.9+ (PyMySQL / `mariadb`) y Java 17+ (JDBC). |
+
 ## Contenido del repositorio
 
 ```
 glob-gusters-videoclub/
 ├── docs/
+│   ├── MER.pdf / MER.png                # Modelo Entidad-Relación del proyecto
+│   ├── glob_gusters_diccionario.pdf     # Diccionario de datos: tablas, columnas, tipos y llaves
 │   ├── relational-database.pdf          # Taller resuelto: diseño E-R de Glob-Gusters
 │   ├── sql_scripts_commands.pdf         # Resumen de los grupos de comandos SQL (DDL/DML/DQL/DCL/TCL/VDL)
 │   └── steps-create-project-database.pdf# Orden de ejecución recomendado del proyecto
 ├── sql/
-│   └── mariadb/
-│       ├── glob_gusters.sql             # DDL: base de datos, tablas, constraints y trigger
-│       ├── glob_gusters_insert.sql      # DML: datos de prueba para todas las tablas
-│       ├── check-mariadb.sql            # Script de diagnóstico del servidor MariaDB
-│       └── commands/
-│           ├── 01_DDL.sql               # CREATE / ALTER / DROP de ejemplo
-│           ├── 02_DML.sql               # INSERT / UPDATE / DELETE de ejemplo
-│           ├── 03_DQL.sql               # SELECT / JOIN / GROUP BY de ejemplo
-│           ├── 04_VDL.sql               # CREATE VIEW / consulta / DROP VIEW de ejemplo
-│           ├── 05_DCL.sql               # CREATE USER / GRANT / REVOKE de ejemplo
-│           └── 06_TCL.sql               # START TRANSACTION / SAVEPOINT / COMMIT / ROLLBACK
+│   ├── mariadb/
+│   │   ├── glob_gusters.sql             # DDL: base de datos, tablas, constraints y triggers
+│   │   ├── glob_gusters_insert.sql      # DML: datos de prueba para todas las tablas
+│   │   ├── check-mariadb.sql            # Script de diagnóstico del servidor MariaDB
+│   │   └── commands/
+│   │       ├── 01_DDL.sql               # CREATE / ALTER / DROP de ejemplo
+│   │       ├── 02_DML.sql               # INSERT / UPDATE / DELETE de ejemplo
+│   │       ├── 03_DQL.sql               # SELECT / JOIN / GROUP BY de ejemplo
+│   │       ├── 04_VDL.sql               # CREATE VIEW / consulta / DROP VIEW de ejemplo
+│   │       ├── 05_DCL.sql               # CREATE USER / GRANT / REVOKE de ejemplo
+│   │       └── 06_TCL.sql               # START TRANSACTION / SAVEPOINT / COMMIT / ROLLBACK
 │   └── oracle_apex/                     # Versión del proyecto para Oracle Database (APEX)
-│       ├── 00_glob_gusters_oracle_apex.sql   # DDL: tablas, constraints y trigger compuesto
-│       ├── 00b_glob_gusters_insert_oracle.sql# DML: datos de prueba (MERGE, repetible)
+│       ├── 00_glob_gusters_oracle_apex.sql    # DDL: tablas, constraints y trigger compuesto
+│       ├── 00b_glob_gusters_insert_oracle.sql # DML: datos de prueba (MERGE, repetible)
 │       └── 01_DDL_oracle.sql ... 06_TCL_oracle.sql # Equivalentes Oracle de 01_DDL a 06_TCL
 ├── py/
 │   ├── conexion.py                      # Conexión a MariaDB (PyMySQL) y funciones comunes
+│   ├── conexion_mariabd.py              # Ejemplo mínimo con el conector oficial `mariadb`
 │   ├── ddl.py / dml.py / dql.py         # Equivalentes en Python de 01_DDL, 02_DML y 03_DQL
 │   ├── vdl.py / dcl.py / tcl.py         # Equivalentes en Python de 04_VDL, 05_DCL y 06_TCL
 │   └── requirements.txt                 # Dependencias de Python (PyMySQL)
@@ -85,10 +165,15 @@ glob-gusters-videoclub/
 ├── tests/
 │   └── mariadb/
 │       └── glob_gusters_test.sql        # Pruebas de integridad integral del proyecto
+├── logs/                                # Bitácoras de ejecución local (ignorada por Git)
 ├── .gitignore
 ├── LICENSE
 └── README.md
 ```
+
+> `java/lib/` (driver JDBC) y `java/out/` (clases compiladas) se generan localmente y
+> no se versionan. `logs/` guarda el resultado de cada ejecución completa: un
+> `00_resumen.log` con el servidor, el comando y el resultado global, y un `.log` por script.
 
 ## Requisitos previos
 
@@ -100,6 +185,9 @@ glob-gusters-videoclub/
   - **Linux:** `/opt/lampp/bin/mariadb`
 - Visual Studio Code con la extensión "MySQL" o "SQLTools" (opcional, para editar).
 - MySQL Workbench (opcional, para la ingeniería inversa del modelo E-R).
+- Python 3.9+ (opcional, para la carpeta `py/`).
+- JDK 17 o superior (opcional, para la carpeta `java/`).
+- Oracle Database 12c o superior, o un workspace de Oracle APEX (opcional, para `sql/oracle_apex/`).
 - Git y una cuenta de GitHub (opcional, para control de versiones).
 
 ## Ejecución paso a paso en XAMPP MariaDB
@@ -302,6 +390,10 @@ Get-Content tests\mariadb\glob_gusters_test.sql | & "C:\xampp\mysql\bin\mariadb.
     --force glob_gusters < tests/mariadb/glob_gusters_test.sql
 ```
 
+Las 23 pruebas cubren: existencia de las 11 tablas y las 2 vistas, datos en cada tabla,
+registros huérfanos, los tres triggers, el `CHECK` de fechas, la coherencia de las vistas
+y los permisos de los usuarios de ejemplo.
+
 El resultado es una tabla con una fila por prueba (`PASS`/`FAIL`) y un resumen final
 con el total de pruebas aprobadas. El script no requiere procedimientos almacenados,
 por lo que funciona incluso en instalaciones de XAMPP con la tabla de sistema
@@ -360,6 +452,10 @@ base `glob_gusters`). Se pueden cambiar sin editar el código con las variables 
 | `py/vdl.py` | `04_VDL.sql` | Crea y consulta las dos vistas; `--drop` las elimina. |
 | `py/dcl.py` | `05_DCL.sql` | CREATE USER / GRANT / REVOKE / SHOW GRANTS (requiere cuenta administrativa). |
 | `py/tcl.py` | `06_TCL.sql` | Transacción con SAVEPOINT y COMMIT, y otra descartada con ROLLBACK. |
+
+`py/conexion_mariabd.py` es un ejemplo aparte, mínimo, con el conector oficial `mariadb`
+(`pip install mariadb`, no incluido en `requirements.txt`): lista la tabla `nacionalidad`.
+Tiene el usuario, la clave y el puerto escritos en el código; edítalos si tu servidor difiere.
 
 Se ejecutan en el mismo orden que los scripts SQL (`ddl` → `dml` → `dql` → `vdl` →
 `dcl` → `tcl`) y, como ellos, se pueden repetir sin errores ni datos duplicados. Las
