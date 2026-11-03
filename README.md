@@ -119,7 +119,7 @@ ejemplo para un entorno de práctica; cámbialas en cualquier uso real.
 | Motor alternativo | Oracle Database 12c o superior (Oracle APEX), en `sql/oracle_apex/`. |
 | Base de datos | `glob_gusters`, con juego de caracteres `utf8mb4` y collation `utf8mb4_general_ci`. |
 | Motor de almacenamiento | InnoDB (necesario para llaves foráneas y transacciones). |
-| Puerto de conexión | **3307** (en las variables de entorno `GLOB_GUSTERS_PORT` se puede cambiar). |
+| Puerto de conexión | **3306** (en las variables de entorno `GLOB_GUSTERS_PORT` se puede cambiar). |
 | Usuario por defecto | `root` sin contraseña (valor de XAMPP; ajústalo si tu servidor la exige). |
 | Objetos | 11 tablas, 2 vistas, 3 triggers, 2 usuarios de ejemplo y 1 índice adicional. |
 | Normalización | Tercera Forma Normal (3FN). |
@@ -193,7 +193,7 @@ glob-gusters-videoclub/
 ## Ejecución paso a paso en XAMPP MariaDB
 
 Todos los ejemplos usan la misma conexión en los tres sistemas operativos
-(`-u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4`); sólo cambia la
+(`-u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4`); sólo cambia la
 ruta del binario y cómo el shell redirige la entrada estándar. Por defecto, XAMPP
 configura el usuario `root` **sin contraseña**: cuando el comando pida `Enter password:`,
 basta con presionar Enter.
@@ -261,7 +261,7 @@ el cliente se detendría en la primera de ellas. El encabezado del script docume
 las tres limitaciones conocidas del entorno y por qué no son errores del proyecto.
 
 ```bash
-mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 \
+mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
     --force < sql/mariadb/check-mariadb.sql
 ```
 
@@ -275,7 +275,7 @@ entrada estándar, por lo que se usa `Get-Content` junto con una función auxili
 
 ```powershell
 function Invoke-GlobGustersScript($Path) {
-    Get-Content $Path | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4
+    Get-Content $Path | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4
 }
 
 Invoke-GlobGustersScript "sql\mariadb\glob_gusters.sql"          # 1. Base de datos, tablas, constraints y trigger de negocio
@@ -292,7 +292,7 @@ Invoke-GlobGustersScript "sql\mariadb\commands\06_TCL.sql"       # 8. START TRAN
 
 ```bash
 run_mariadb() {
-    /Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 "$@"
+    /Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 "$@"
 }
 
 run_mariadb < sql/mariadb/glob_gusters.sql          # 1. Base de datos, tablas, constraints y trigger de negocio
@@ -309,7 +309,7 @@ run_mariadb < sql/mariadb/commands/06_TCL.sql       # 8. START TRANSACTION / SAV
 
 ```bash
 run_mariadb() {
-    /opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 "$@"
+    /opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 "$@"
 }
 
 run_mariadb < sql/mariadb/glob_gusters.sql          # 1. Base de datos, tablas, constraints y trigger de negocio
@@ -324,7 +324,7 @@ run_mariadb < sql/mariadb/commands/06_TCL.sql       # 8. START TRANSACTION / SAV
 
 > Si prefieres usar `cmd.exe` en Windows en vez de PowerShell, la redirección `<`
 > funciona igual que en macOS/Linux:
-> `C:\xampp\mysql\bin\mariadb.exe -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 < sql\mariadb\glob_gusters.sql`
+> `C:\xampp\mysql\bin\mariadb.exe -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < sql\mariadb\glob_gusters.sql`
 
 #### Ejecución segura: se puede repetir y desordenar sin miedo
 
@@ -373,20 +373,20 @@ conexión continúe después de cada uno para poder verificarlos y limpiarlos:
 **Windows (PowerShell):**
 
 ```powershell
-Get-Content tests\mariadb\glob_gusters_test.sql | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 --force glob_gusters
+Get-Content tests\mariadb\glob_gusters_test.sql | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters
 ```
 
 **macOS:**
 
 ```bash
-/Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 \
+/Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
     --force glob_gusters < tests/mariadb/glob_gusters_test.sql
 ```
 
 **Linux:**
 
 ```bash
-/opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 \
+/opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
     --force glob_gusters < tests/mariadb/glob_gusters_test.sql
 ```
 
@@ -428,7 +428,7 @@ Orden de ejecución (obligatorio):
 
 La carpeta `py/` conecta la base `glob_gusters` a Python y reproduce, con los mismos
 datos de ejemplo, cada grupo de comandos SQL de `sql/mariadb/commands/`. La conexión
-equivale a `mysql -u root -p -h localhost -P 3307 -D glob_gusters`.
+equivale a `mysql -u root -p -h localhost -P 3306 -D glob_gusters`.
 
 **Requisitos:** Python 3.9+ y el servidor MariaDB de XAMPP en ejecución, con la base ya
 creada (pasos 1 a 3 de la sección anterior).
@@ -438,7 +438,7 @@ pip install -r py/requirements.txt
 python py/conexion.py      # prueba de conexión: versión, base y cuenta
 ```
 
-Los valores por defecto son los de XAMPP (`localhost`, `3307`, `root` sin contraseña,
+Los valores por defecto son los de XAMPP (`localhost`, `3306`, `root` sin contraseña,
 base `glob_gusters`). Se pueden cambiar sin editar el código con las variables de entorno
 `GLOB_GUSTERS_HOST`, `GLOB_GUSTERS_PORT`, `GLOB_GUSTERS_USER`, `GLOB_GUSTERS_PASSWORD` y
 `GLOB_GUSTERS_DB`. `dcl.py` también acepta `GLOB_GUSTERS_PASS_REPORTES` y
@@ -465,7 +465,7 @@ sentencias usan parámetros (`%s`) y nunca concatenan valores dentro del SQL.
 
 La carpeta `java/` hace lo mismo que `py/` pero con **JDBC**: una clase `Conexion` y un
 programa por grupo de comandos SQL. La conexión equivale a
-`mysql -u root -p -h localhost -P 3307 -D glob_gusters`.
+`mysql -u root -p -h localhost -P 3306 -D glob_gusters`.
 
 **Requisitos:** JDK 17 o superior (usa *text blocks* y `record`) y el servidor MariaDB
 de XAMPP en ejecución, con la base ya creada (pasos 1 a 3 de arriba). El driver
@@ -483,7 +483,7 @@ java -cp "out:lib/*" Conexion      # prueba de conexión: versión, base y cuent
 
 En Windows el separador del *classpath* es `;`: `java -cp "out;lib/*" Conexion`.
 
-Los valores por defecto son los de XAMPP (`localhost`, `3307`, `root` sin contraseña,
+Los valores por defecto son los de XAMPP (`localhost`, `3306`, `root` sin contraseña,
 base `glob_gusters`) y se cambian con las mismas variables de entorno de Python:
 `GLOB_GUSTERS_HOST`, `GLOB_GUSTERS_PORT`, `GLOB_GUSTERS_USER`,
 `GLOB_GUSTERS_PASSWORD` y `GLOB_GUSTERS_DB`. `Dcl` también acepta
