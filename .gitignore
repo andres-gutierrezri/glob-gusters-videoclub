@@ -22,6 +22,11 @@
 __pycache__/
 *.pyc
 
+# Java
+java/out/
+java/lib/
+*.class
+
 # Sistema operativo
 Thumbs.db
 .DS_Store
