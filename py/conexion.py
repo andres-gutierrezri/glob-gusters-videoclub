@@ -42,7 +42,8 @@ CONFIG = {
     "host": os.getenv("GLOB_GUSTERS_HOST", "localhost"),
     "port": int(os.getenv("GLOB_GUSTERS_PORT", "3306")),
     "user": os.getenv("GLOB_GUSTERS_USER", "root"),
-    "password": os.getenv("GLOB_GUSTERS_PASSWORD", ""),
+    # Vacía o inexistente equivale a "sin contraseña" (el valor de XAMPP para root).
+    "password": os.getenv("GLOB_GUSTERS_PASSWORD") or "",
     "database": os.getenv("GLOB_GUSTERS_DB", "glob_gusters"),
     "charset": "utf8mb4",
     "cursorclass": DictCursor,
@@ -54,9 +55,16 @@ def conectar(**cambios):
 
     autocommit queda apagado: cada script decide cuándo hacer commit/rollback.
     """
+    datos = {**CONFIG, **cambios}
+    datos["password"] = datos.get("password") or ""  # None también significa "sin contraseña"
     try:
-        return pymysql.connect(**{**CONFIG, **cambios}, autocommit=False)
+        return pymysql.connect(**datos, autocommit=False)
     except pymysql.err.OperationalError as error:
+        if error.args[0] == 1045 and not datos["password"]:
+            raise SystemExit(
+                f"Acceso denegado para '{datos['user']}' sin contraseña: define "
+                "GLOB_GUSTERS_PASSWORD en el archivo .env (ver .env.example)."
+            ) from error
         if error.args[0] == 1049:
             raise SystemExit(
                 "La base de datos no existe todavía: ejecuta primero "

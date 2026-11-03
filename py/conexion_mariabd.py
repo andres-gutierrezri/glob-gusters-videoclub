@@ -1,14 +1,16 @@
 import sys
 import mariadb
 
+from conexion import CONFIG  # mismos valores que conexion.py (variables de entorno y .env)
+
 try:
-    # Establecer la conexión con la base de datos
+    # Establecer la conexión con la base de datos (la contraseña vacía es válida)
     conexion = mariadb.connect(
-        user="root",
-        password="",
-        host="127.0.0.1",
-        port=3306,
-        database="glob_gusters"
+        user=CONFIG["user"],
+        password=CONFIG["password"] or "",
+        host=CONFIG["host"],
+        port=CONFIG["port"],
+        database=CONFIG["database"]
     )
 except mariadb.Error as e:
     print(f"Error al conectar a MariaDB: {e}")
