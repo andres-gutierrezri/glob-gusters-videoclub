@@ -22,10 +22,33 @@
 __pycache__/
 *.pyc
 
-# Java
+# Java: compilación
 java/out/
-java/lib/
+java/bin/
+java/target/
+java/build/
 *.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# Java: dependencias descargables (driver JDBC)
+java/lib/
+
+# Java: Maven / Gradle
+.gradle/
+.mvn/wrapper/maven-wrapper.jar
+
+# Java: configuración de IDE (IntelliJ IDEA, Eclipse, NetBeans)
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.factorypath
+nbproject/
 
 # Sistema operativo
 Thumbs.db
