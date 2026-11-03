@@ -1,7 +1,7 @@
 """Conexión de Python a la base de datos glob_gusters (XAMPP MariaDB).
 
 Equivale al comando de consola:
-    mysql -u root -p -h localhost -P 3307 -D glob_gusters
+    mysql -u root -p -h localhost -P 3306 -D glob_gusters
 
 Los valores por defecto son los de una instalación de XAMPP (root sin contraseña) y
 pueden cambiarse con variables de entorno, sin tocar el código:
@@ -22,7 +22,7 @@ from pymysql.cursors import DictCursor
 
 CONFIG = {
     "host": os.getenv("GLOB_GUSTERS_HOST", "localhost"),
-    "port": int(os.getenv("GLOB_GUSTERS_PORT", "3307")),
+    "port": int(os.getenv("GLOB_GUSTERS_PORT", "3306")),
     "user": os.getenv("GLOB_GUSTERS_USER", "root"),
     "password": os.getenv("GLOB_GUSTERS_PASSWORD", ""),
     "database": os.getenv("GLOB_GUSTERS_DB", "glob_gusters"),

@@ -13,7 +13,7 @@ import java.util.Map;
  * Conexión de Java (JDBC) a la base de datos glob_gusters (XAMPP MariaDB).
  *
  * Equivale al comando de consola:
- *     mysql -u root -p -h localhost -P 3307 -D glob_gusters
+ *     mysql -u root -p -h localhost -P 3306 -D glob_gusters
  *
  * Los valores por defecto son los de una instalación de XAMPP (root sin contraseña) y
  * pueden cambiarse con variables de entorno, sin tocar el código:
@@ -28,7 +28,7 @@ import java.util.Map;
 public class Conexion {
 
     static final String HOST = env("GLOB_GUSTERS_HOST", "localhost");
-    static final int PORT = Integer.parseInt(env("GLOB_GUSTERS_PORT", "3307"));
+    static final int PORT = Integer.parseInt(env("GLOB_GUSTERS_PORT", "3306"));
     static final String USER = env("GLOB_GUSTERS_USER", "root");
     static final String PASSWORD = env("GLOB_GUSTERS_PASSWORD", "");
     static final String DB = env("GLOB_GUSTERS_DB", "glob_gusters");

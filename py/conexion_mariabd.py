@@ -7,7 +7,7 @@ try:
         user="root",
         password="",
         host="127.0.0.1",
-        port=3307,
+        port=3306,
         database="glob_gusters"
     )
 except mariadb.Error as e:
