@@ -87,11 +87,17 @@ public class Conexion {
      */
     static Connection conectar(String usuario, String clave) throws SQLException {
         String url = "jdbc:mariadb://" + HOST + ":" + PORT + "/" + DB + "?characterEncoding=utf8";
+        String claveSegura = clave == null ? "" : clave; // vacía o nula = sin contraseña
         try {
-            Connection con = DriverManager.getConnection(url, usuario, clave);
+            Connection con = DriverManager.getConnection(url, usuario, claveSegura);
             con.setAutoCommit(false);
             return con;
         } catch (SQLException error) {
+            if (error.getErrorCode() == 1045 && claveSegura.isEmpty()) {
+                throw new SQLException("Acceso denegado para '" + usuario + "' sin contraseña: define "
+                        + "GLOB_GUSTERS_PASSWORD en el archivo .env (ver .env.example).",
+                        error.getSQLState(), error.getErrorCode(), error);
+            }
             if (error.getErrorCode() == 1049) {
                 throw new IllegalStateException("La base de datos no existe todavía: ejecuta primero "
                         + "sql/mariadb/glob_gusters.sql y glob_gusters_insert.sql (ver README).", error);
@@ -108,7 +114,9 @@ public class Conexion {
             while (rs.next()) {
                 Map<String, Object> fila = new LinkedHashMap<>();
                 for (int i = 1; i <= meta.getColumnCount(); i++) {
-                    fila.put(meta.getColumnLabel(i), rs.getObject(i));
+                    // El driver entrega YEAR como java.sql.Date (1997-01-01); se muestra solo el año.
+                    boolean esAnio = "YEAR".equalsIgnoreCase(meta.getColumnTypeName(i));
+                    fila.put(meta.getColumnLabel(i), esAnio ? (Object) rs.getObject(i, Integer.class) : rs.getObject(i));
                 }
                 filas.add(fila);
             }
