@@ -74,6 +74,10 @@ glob-gusters-videoclub/
 │   ├── ddl.py / dml.py / dql.py         # Equivalentes en Python de 01_DDL, 02_DML y 03_DQL
 │   ├── vdl.py / dcl.py / tcl.py         # Equivalentes en Python de 04_VDL, 05_DCL y 06_TCL
 │   └── requirements.txt                 # Dependencias de Python (PyMySQL)
+├── java/
+│   ├── Conexion.java                    # Conexión a MariaDB (JDBC) y funciones comunes
+│   ├── Ddl.java / Dml.java / Dql.java   # Equivalentes en Java de 01_DDL, 02_DML y 03_DQL
+│   └── Vdl.java / Dcl.java / Tcl.java   # Equivalentes en Java de 04_VDL, 05_DCL y 06_TCL
 ├── tests/
 │   └── mariadb/
 │       └── glob_gusters_test.sql        # Pruebas de integridad integral del proyecto
@@ -97,7 +101,7 @@ glob-gusters-videoclub/
 ## Ejecución paso a paso en XAMPP MariaDB
 
 Todos los ejemplos usan la misma conexión en los tres sistemas operativos
-(`-u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4`); sólo cambia la
+(`-u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4`); sólo cambia la
 ruta del binario y cómo el shell redirige la entrada estándar. Por defecto, XAMPP
 configura el usuario `root` **sin contraseña**: cuando el comando pida `Enter password:`,
 basta con presionar Enter.
@@ -165,7 +169,7 @@ el cliente se detendría en la primera de ellas. El encabezado del script docume
 las tres limitaciones conocidas del entorno y por qué no son errores del proyecto.
 
 ```bash
-mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
+mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 \
     --force < sql/mariadb/check-mariadb.sql
 ```
 
@@ -179,7 +183,7 @@ entrada estándar, por lo que se usa `Get-Content` junto con una función auxili
 
 ```powershell
 function Invoke-GlobGustersScript($Path) {
-    Get-Content $Path | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4
+    Get-Content $Path | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4
 }
 
 Invoke-GlobGustersScript "sql\mariadb\glob_gusters.sql"          # 1. Base de datos, tablas, constraints y trigger de negocio
@@ -196,7 +200,7 @@ Invoke-GlobGustersScript "sql\mariadb\commands\06_TCL.sql"       # 8. START TRAN
 
 ```bash
 run_mariadb() {
-    /Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 "$@"
+    /Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 "$@"
 }
 
 run_mariadb < sql/mariadb/glob_gusters.sql          # 1. Base de datos, tablas, constraints y trigger de negocio
@@ -213,7 +217,7 @@ run_mariadb < sql/mariadb/commands/06_TCL.sql       # 8. START TRANSACTION / SAV
 
 ```bash
 run_mariadb() {
-    /opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 "$@"
+    /opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 "$@"
 }
 
 run_mariadb < sql/mariadb/glob_gusters.sql          # 1. Base de datos, tablas, constraints y trigger de negocio
@@ -228,7 +232,7 @@ run_mariadb < sql/mariadb/commands/06_TCL.sql       # 8. START TRANSACTION / SAV
 
 > Si prefieres usar `cmd.exe` en Windows en vez de PowerShell, la redirección `<`
 > funciona igual que en macOS/Linux:
-> `C:\xampp\mysql\bin\mariadb.exe -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < sql\mariadb\glob_gusters.sql`
+> `C:\xampp\mysql\bin\mariadb.exe -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 < sql\mariadb\glob_gusters.sql`
 
 #### Ejecución segura: se puede repetir y desordenar sin miedo
 
@@ -277,20 +281,20 @@ conexión continúe después de cada uno para poder verificarlos y limpiarlos:
 **Windows (PowerShell):**
 
 ```powershell
-Get-Content tests\mariadb\glob_gusters_test.sql | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters
+Get-Content tests\mariadb\glob_gusters_test.sql | & "C:\xampp\mysql\bin\mariadb.exe" -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 --force glob_gusters
 ```
 
 **macOS:**
 
 ```bash
-/Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
+/Applications/XAMPP/xamppfiles/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 \
     --force glob_gusters < tests/mariadb/glob_gusters_test.sql
 ```
 
 **Linux:**
 
 ```bash
-/opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
+/opt/lampp/bin/mariadb -u root -p -h 127.0.0.1 -P 3307 --default-character-set=utf8mb4 \
     --force glob_gusters < tests/mariadb/glob_gusters_test.sql
 ```
 
@@ -304,7 +308,7 @@ una versión más reciente sin ejecutar `mysql_upgrade`).
 
 La carpeta `py/` conecta la base `glob_gusters` a Python y reproduce, con los mismos
 datos de ejemplo, cada grupo de comandos SQL de `sql/mariadb/commands/`. La conexión
-equivale a `mysql -u root -p -h localhost -P 3306 -D glob_gusters`.
+equivale a `mysql -u root -p -h localhost -P 3307 -D glob_gusters`.
 
 **Requisitos:** Python 3.9+ y el servidor MariaDB de XAMPP en ejecución, con la base ya
 creada (pasos 1 a 3 de la sección anterior).
@@ -314,7 +318,7 @@ pip install -r py/requirements.txt
 python py/conexion.py      # prueba de conexión: versión, base y cuenta
 ```
 
-Los valores por defecto son los de XAMPP (`localhost`, `3306`, `root` sin contraseña,
+Los valores por defecto son los de XAMPP (`localhost`, `3307`, `root` sin contraseña,
 base `glob_gusters`). Se pueden cambiar sin editar el código con las variables de entorno
 `GLOB_GUSTERS_HOST`, `GLOB_GUSTERS_PORT`, `GLOB_GUSTERS_USER`, `GLOB_GUSTERS_PASSWORD` y
 `GLOB_GUSTERS_DB`. `dcl.py` también acepta `GLOB_GUSTERS_PASS_REPORTES` y
@@ -332,6 +336,48 @@ base `glob_gusters`). Se pueden cambiar sin editar el código con las variables 
 Se ejecutan en el mismo orden que los scripts SQL (`ddl` → `dml` → `dql` → `vdl` →
 `dcl` → `tcl`) y, como ellos, se pueden repetir sin errores ni datos duplicados. Las
 sentencias usan parámetros (`%s`) y nunca concatenan valores dentro del SQL.
+
+## Conexión y consultas desde Java
+
+La carpeta `java/` hace lo mismo que `py/` pero con **JDBC**: una clase `Conexion` y un
+programa por grupo de comandos SQL. La conexión equivale a
+`mysql -u root -p -h localhost -P 3307 -D glob_gusters`.
+
+**Requisitos:** JDK 17 o superior (usa *text blocks* y `record`) y el servidor MariaDB
+de XAMPP en ejecución, con la base ya creada (pasos 1 a 3 de arriba). El driver
+[MariaDB Connector/J](https://mariadb.com/kb/en/about-mariadb-connector-j/) no se
+versiona; se descarga a `java/lib/`:
+
+```bash
+cd java
+mkdir -p lib
+curl -L -o lib/mariadb-java-client-3.5.3.jar \
+  https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/3.5.3/mariadb-java-client-3.5.3.jar
+javac -encoding UTF-8 -d out *.java
+java -cp "out:lib/*" Conexion      # prueba de conexión: versión, base y cuenta
+```
+
+En Windows el separador del *classpath* es `;`: `java -cp "out;lib/*" Conexion`.
+
+Los valores por defecto son los de XAMPP (`localhost`, `3307`, `root` sin contraseña,
+base `glob_gusters`) y se cambian con las mismas variables de entorno de Python:
+`GLOB_GUSTERS_HOST`, `GLOB_GUSTERS_PORT`, `GLOB_GUSTERS_USER`,
+`GLOB_GUSTERS_PASSWORD` y `GLOB_GUSTERS_DB`. `Dcl` también acepta
+`GLOB_GUSTERS_PASS_REPORTES` y `GLOB_GUSTERS_PASS_MOSTRADOR`.
+
+| Clase | Equivale a | Qué hace |
+|---|---|---|
+| `Ddl` | `01_DDL.sql` | CREATE / ALTER / CREATE INDEX / DROP con `IF [NOT] EXISTS`. |
+| `Dml` | `02_DML.sql` | INSERT / UPDATE / DELETE con parámetros y llaves naturales. |
+| `Dql` | `03_DQL.sql` | SELECT, JOIN y GROUP BY; `java -cp "out:lib/*" Dql <nombre>` ejecuta una sola consulta. |
+| `Vdl` | `04_VDL.sql` | Crea y consulta las dos vistas; `--drop` las elimina. |
+| `Dcl` | `05_DCL.sql` | CREATE USER / GRANT / REVOKE / SHOW GRANTS (requiere cuenta administrativa). |
+| `Tcl` | `06_TCL.sql` | Transacción con SAVEPOINT y COMMIT, y otra descartada con ROLLBACK. |
+
+Se ejecutan en el mismo orden que los scripts SQL (`Ddl` → `Dml` → `Dql` → `Vdl` →
+`Dcl` → `Tcl`) y, como ellos, se pueden repetir sin errores ni datos duplicados. Las
+sentencias usan parámetros (`?`) con `PreparedStatement` y nunca concatenan valores
+dentro del SQL.
 
 ## Cómo subir este proyecto a GitHub
 
