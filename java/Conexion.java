@@ -34,10 +34,13 @@ import java.util.Map;
  * Si existe un archivo `.env` en la raíz del proyecto, se leen de ahí (las variables ya
  * definidas en el sistema tienen prioridad). Plantilla: `.env.example`.
  *
- * Dependencia: java/lib/mariadb-java-client-*.jar (ver README).
+ * Requisitos: JDK 17 o superior, el driver java/lib/mariadb-java-client-3.5.3.jar (se descarga una
+ * sola vez; ver README.md) y un servidor MariaDB 10.2.1+ en marcha. Instalación y comandos para
+ * Windows, macOS y Linux: README.md, secciones «Dependencias requeridas» y «Guía de
+ * ejecución por sistema operativo».
  *
  * Prueba rápida de la conexión:
- *     java -cp "out:lib/*" Conexion
+ *     java -cp "out:lib/*" Conexion        (Windows: java -cp "out;lib/*" Conexion)
  */
 public class Conexion {
 

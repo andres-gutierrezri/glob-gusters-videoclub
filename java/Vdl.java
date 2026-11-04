@@ -12,6 +12,14 @@ import java.util.Map;
  * CREATE OR REPLACE VIEW de las dos vistas del proyecto y consulta de cada una.
  * El DROP VIEW queda detrás de la opción --drop, igual que está comentado en el .sql:
  *     java -cp "out:lib/*" Vdl --drop
+ *
+ * Requisitos: JDK 17 o superior, el driver java/lib/mariadb-java-client-3.5.3.jar (se descarga
+ * una sola vez; ver README.md), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters
+ * ya creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
+ * «Dependencias requeridas» y «Guía de ejecución por sistema operativo».
+ * Compilación y ejecución, desde la carpeta java/:
+ *     javac -encoding UTF-8 -d out *.java        (Windows PowerShell: (Get-ChildItem *.java).Name)
+ *     java -cp "out:lib/*" Vdl          (Windows: java -cp "out;lib/*" Vdl)
  */
 public class Vdl {
 

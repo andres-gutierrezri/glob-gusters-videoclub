@@ -14,6 +14,14 @@ import java.util.Map;
  * Ejemplo 2: transacción descartada con ROLLBACK.
  * Es repetible: si el cliente de ejemplo ya tiene ese ejemplar sin devolver, no inserta
  * nada (así no se acumulan préstamos hasta chocar con el trigger de máximo 4).
+ *
+ * Requisitos: JDK 17 o superior, el driver java/lib/mariadb-java-client-3.5.3.jar (se descarga
+ * una sola vez; ver README.md), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters
+ * ya creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
+ * «Dependencias requeridas» y «Guía de ejecución por sistema operativo».
+ * Compilación y ejecución, desde la carpeta java/:
+ *     javac -encoding UTF-8 -d out *.java        (Windows PowerShell: (Get-ChildItem *.java).Name)
+ *     java -cp "out:lib/*" Tcl          (Windows: java -cp "out;lib/*" Tcl)
  */
 public class Tcl {
 
