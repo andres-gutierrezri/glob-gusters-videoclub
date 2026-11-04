@@ -450,6 +450,36 @@ equivalente es `@sql/oracle_apex/00_glob_gusters_oracle_apex.sql`, etc.
 | `class file has wrong version` / `invalid source release` | El JDK es anterior a 17. |
 | Tildes o `ñ` mal mostradas en Windows | Ejecuta los SQL con `-e "source ..."` (no canalices con `Get-Content`) y `--default-character-set=utf8mb4`. |
 
+## Última verificación de ejecución
+
+Todo el proyecto se ejecutó de punta a punta el 2026-11-03 en el entorno siguiente. Es un
+registro de lo comprobado, no una garantía para otros equipos.
+
+| Elemento | Versión |
+|---|---|
+| Sistema operativo | macOS (Darwin 25.6, arm64) |
+| Servidor | MariaDB 10.4.28 (XAMPP), puerto 3306 |
+| Python | 3.13.15, con PyMySQL 1.2.3 y mariadb 1.1.14 en `.venv` |
+| Java | JDK 26.0.2.1, MariaDB Connector/J 3.5.3 |
+
+| Qué se ejecutó | Resultado |
+|---|---|
+| Los 8 scripts SQL de `sql/mariadb/` en orden | Los 8 terminan sin errores (código 0). |
+| `tests/mariadb/glob_gusters_test.sql` | 23 de 23 pruebas aprobadas, **PROYECTO OK**. Las 3 líneas `ERROR` que imprime (auto-aval, quinto ejemplar y fechas inválidas) son los rechazos esperados. |
+| `sql/mariadb/check-mariadb.sh` | Termina bien. Solo aparecen 3 errores 1558 (`mysql.proc` desactualizada), documentados en el encabezado del script. |
+| `py/conexion.py`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd.py` | Los 8 terminan sin errores. |
+| `java/` (`Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl`, `Tcl`) | Compilan y las 7 clases terminan sin errores. |
+| Rutas de error | Una consulta desconocida (`dql inexistente`) sale con código 1 y lista las opciones; una contraseña incorrecta es rechazada por el servidor; Python y Java se pueden lanzar desde otra carpeta. |
+
+Notas sobre lo que **no** quedó comprobado:
+
+- Los comandos de Windows y Linux de la guía no se ejecutaron en esa máquina.
+- Los scripts de `sql/oracle_apex/` no se ejecutaron (no hay un Oracle disponible).
+- Los scripts se repitieron sobre la base ya creada (son idempotentes); no se probó la creación
+  desde una base inexistente en esa ejecución.
+- Con una contraseña incorrecta (error 1045 *con* contraseña) Python muestra la traza de
+  `pymysql`; el mensaje amigable solo se da cuando la contraseña está vacía.
+
 ## Ejecución paso a paso en XAMPP MariaDB
 
 Todos los ejemplos usan la misma conexión en los tres sistemas operativos
