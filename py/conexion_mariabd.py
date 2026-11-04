@@ -23,8 +23,10 @@ try:
         user=CONFIG["user"],
         # Contraseña; `or ""` convierte None en cadena vacía (sin contraseña).
         password=CONFIG["password"] or "",
-        # Servidor de MariaDB.
-        host=CONFIG["host"],
+        # Servidor de MariaDB. Con "localhost" el conector oficial usa el socket Unix local
+        # (que puede pertenecer a otro servidor MySQL/MariaDB e ignora el puerto); por eso se
+        # fuerza TCP con 127.0.0.1, igual que hace PyMySQL.
+        host="127.0.0.1" if CONFIG["host"] == "localhost" else CONFIG["host"],
         # Puerto TCP.
         port=CONFIG["port"],
         # Base de datos a usar.
