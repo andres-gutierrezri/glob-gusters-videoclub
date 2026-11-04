@@ -6,6 +6,13 @@ administrativa (por defecto root de XAMPP). Es repetible: CREATE USER usa IF NOT
 Las contraseñas de las cuentas de ejemplo se pueden cambiar con las variables de
 entorno GLOB_GUSTERS_PASS_REPORTES y GLOB_GUSTERS_PASS_MOSTRADOR; los valores por
 defecto son los mismos del .sql.
+
+Requisitos: Python 3.9+, el paquete PyMySQL (`pip install -r requirements.txt` dentro del
+entorno virtual .venv), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters ya
+creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
+«Dependencias requeridas» y «Guía de ejecución por sistema operativo».
+Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
+    python py/dcl.py          (en Windows se escribe igual)
 """
 
 # Módulo estándar para leer variables de entorno.

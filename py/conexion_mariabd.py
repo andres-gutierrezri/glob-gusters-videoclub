@@ -9,7 +9,13 @@ base de datos salen de las variables de entorno GLOB_GUSTERS_HOST, GLOB_GUSTERS_
 GLOB_GUSTERS_USER, GLOB_GUSTERS_PASSWORD y GLOB_GUSTERS_DB, que conexion.py lee del
 archivo `.env` de la raíz (una variable ya definida en el sistema tiene prioridad).
 
-Uso:
+Requisitos: Python 3.9+, el paquete `mariadb` (está en requirements.txt) y, en el sistema,
+MariaDB Connector/C >= 3.3.1 (macOS: brew install mariadb-connector-c; Debian/Ubuntu:
+sudo apt install libmariadb-dev build-essential python3-dev; Windows: instalador de
+mariadb.com/downloads/connectors si pip intenta compilar). Detalle por sistema operativo:
+README.md, sección «Dependencias requeridas».
+
+Uso (en Windows se escribe igual):
     python py/conexion_mariabd.py
 """
 

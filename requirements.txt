@@ -18,6 +18,9 @@ PyMySQL>=1.1
 #     macOS:  brew install mariadb-connector-c
 #             export MARIADB_CONFIG=/opt/homebrew/opt/mariadb-connector-c/bin/mariadb_config
 #     Linux:  sudo apt install libmariadb-dev        (Debian/Ubuntu)
+#             (Fedora: sudo dnf install mariadb-connector-c-devel gcc python3-devel)
+#     Windows: normalmente pip instala un paquete ya compilado; si intenta compilar, instala
+#             MariaDB Connector/C desde https://mariadb.com/downloads/connectors/
 # El Connector/C que trae XAMPP (3.1.x) es demasiado antiguo: sin el prerrequisito,
 # `pip install` falla con "requires MariaDB Connector/C >= 3.3.1". Si solo vas a usar
 # PyMySQL, comenta la línea siguiente y el resto del proyecto funciona igual.

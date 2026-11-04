@@ -2,6 +2,13 @@
 
 CREATE / ALTER / CREATE INDEX / DROP. Idempotente: todo usa IF [NOT] EXISTS.
 Requiere haber ejecutado antes sql/mariadb/glob_gusters.sql.
+
+Requisitos: Python 3.9+, el paquete PyMySQL (`pip install -r requirements.txt` dentro del
+entorno virtual .venv), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters ya
+creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
+«Dependencias requeridas» y «Guía de ejecución por sistema operativo».
+Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
+    python py/ddl.py          (en Windows se escribe igual)
 """
 
 # Funciones comunes de conexion.py: context manager de conexión, SELECT, escritura e impresión.

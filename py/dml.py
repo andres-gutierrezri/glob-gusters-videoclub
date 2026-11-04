@@ -4,6 +4,13 @@ INSERT (nuevo socio), UPDATE (estado de un ejemplar y duración de una película
 DELETE (una fila de reparto). Todo se localiza por llave natural y es repetible.
 Requiere glob_gusters_insert.sql y ddl.py (columnas Email y Duracion_Minutos).
 Las sentencias llevan parámetros (%s), nunca valores concatenados en el SQL.
+
+Requisitos: Python 3.9+, el paquete PyMySQL (`pip install -r requirements.txt` dentro del
+entorno virtual .venv), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters ya
+creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
+«Dependencias requeridas» y «Guía de ejecución por sistema operativo».
+Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
+    python py/dml.py          (en Windows se escribe igual)
 """
 
 # Funciones comunes de conexion.py.

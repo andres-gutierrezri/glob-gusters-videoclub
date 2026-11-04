@@ -4,6 +4,13 @@ Ejemplo 1: START TRANSACTION + SAVEPOINT + COMMIT al registrar una renta con su 
 Ejemplo 2: transacción descartada con ROLLBACK.
 Es repetible: si el cliente de ejemplo ya tiene ese ejemplar sin devolver, no inserta
 nada (así no se acumulan préstamos hasta chocar con el trigger de máximo 4).
+
+Requisitos: Python 3.9+, el paquete PyMySQL (`pip install -r requirements.txt` dentro del
+entorno virtual .venv), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters ya
+creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
+«Dependencias requeridas» y «Guía de ejecución por sistema operativo».
+Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
+    python py/tcl.py          (en Windows se escribe igual)
 """
 
 # Módulo de PyMySQL; se usa para capturar el error que lanza el trigger de máximo 4.

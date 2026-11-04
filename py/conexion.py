@@ -14,7 +14,10 @@ pueden cambiarse con variables de entorno, sin tocar el código:
 Si existe un archivo `.env` en la raíz del proyecto, se leen de ahí (las variables ya
 definidas en el sistema tienen prioridad). Plantilla: `.env.example`.
 
-Dependencia: pip install -r requirements.txt
+Requisitos: Python 3.9+, el paquete PyMySQL (pip install -r requirements.txt dentro del
+entorno virtual .venv) y un servidor MariaDB 10.2.1+ en marcha. Instalación y comandos para
+Windows, macOS y Linux: README.md, secciones «Dependencias requeridas» y «Guía de
+ejecución por sistema operativo».
 
 Prueba rápida de la conexión:
     python py/conexion.py
