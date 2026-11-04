@@ -483,7 +483,7 @@ base `glob_gusters`). Se pueden cambiar sin editar el código con las variables 
 | `py/tcl.py` | `06_TCL.sql` | Transacción con SAVEPOINT y COMMIT, y otra descartada con ROLLBACK. |
 
 `py/conexion_mariabd.py` es un ejemplo aparte, mínimo, con el conector oficial `mariadb`
-(`pip install mariadb`, comentado en `requirements.txt` porque necesita MariaDB Connector/C ≥ 3.3.1 y el de XAMPP es más antiguo): lista la tabla `nacionalidad`.
+(`mariadb` está en `requirements.txt`, pero necesita instalar antes en el sistema MariaDB Connector/C ≥ 3.3.1 —en macOS `brew install mariadb-connector-c`; el de XAMPP es más antiguo—): lista la tabla `nacionalidad`.
 Tiene el usuario, la clave y el puerto escritos en el código; edítalos si tu servidor difiere.
 
 Se ejecutan en el mismo orden que los scripts SQL (`ddl` → `dml` → `dql` → `vdl` →
@@ -600,7 +600,7 @@ significado que en la tabla anterior.
 |---|---|
 | Bloque de comentarios | Explica cómo crear el entorno virtual e instalar (`python3 -m venv .venv`, `source .venv/bin/activate`, `pip install -r requirements.txt`). |
 | `PyMySQL>=1.1` | Conector MySQL/MariaDB en Python puro; lo usa `py/conexion.py` y, a través de él, todos los scripts de `py/`. |
-| `# mariadb>=1.1` (comentada) | Conector oficial opcional, solo para `py/conexion_mariabd.py`. Está comentada porque necesita MariaDB Connector/C ≥ 3.3.1 y el de XAMPP (3.1.x) es más antiguo. |
+| `mariadb>=1.1` | Conector oficial, solo para `py/conexion_mariabd.py`. Requiere MariaDB Connector/C ≥ 3.3.1 instalado en el sistema (no es un paquete de pip; en macOS `brew install mariadb-connector-c`); el de XAMPP (3.1.x) es más antiguo. Los comentarios del archivo explican cómo instalarlo; si no se necesita, se puede comentar la línea. |
 
 #### `LICENSE`
 

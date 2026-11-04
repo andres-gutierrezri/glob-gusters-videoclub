@@ -12,9 +12,13 @@
 # Lo usan py/conexion.py y, a través de él, ddl.py, dml.py, dql.py, vdl.py, dcl.py y tcl.py.
 PyMySQL>=1.1
 
-# OPCIONAL — Conector oficial de MariaDB, solo para el ejemplo py/conexion_mariabd.py.
-# Está comentado porque se compila contra MariaDB Connector/C >= 3.3.1 y el que trae
-# XAMPP (3.1.x) es demasiado antiguo: `pip install` falla con él. Para usarlo, instala
-# un Connector/C reciente (macOS: `brew install mariadb-connector-c`; Linux:
-# `libmariadb-dev`), descomenta la línea y vuelve a ejecutar `pip install -r requirements.txt`.
-# mariadb>=1.1
+# Conector oficial de MariaDB, solo para el ejemplo py/conexion_mariabd.py.
+# PRERREQUISITO DEL SISTEMA (no es un paquete de pip, por eso no puede listarse aquí):
+# MariaDB Connector/C >= 3.3.1. Instálalo ANTES de ejecutar `pip install -r requirements.txt`:
+#     macOS:  brew install mariadb-connector-c
+#             export MARIADB_CONFIG=/opt/homebrew/opt/mariadb-connector-c/bin/mariadb_config
+#     Linux:  sudo apt install libmariadb-dev        (Debian/Ubuntu)
+# El Connector/C que trae XAMPP (3.1.x) es demasiado antiguo: sin el prerrequisito,
+# `pip install` falla con "requires MariaDB Connector/C >= 3.3.1". Si solo vas a usar
+# PyMySQL, comenta la línea siguiente y el resto del proyecto funciona igual.
+mariadb>=1.1
