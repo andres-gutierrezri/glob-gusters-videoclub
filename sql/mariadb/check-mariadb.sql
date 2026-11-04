@@ -4,7 +4,8 @@
 -- Diagnóstico del servidor MariaDB de XAMPP antes (o en cualquier momento) de
 -- ejecutar el resto de scripts del proyecto: versión, conexión, estado del
 -- servidor, configuración, motores de almacenamiento, cuentas de usuario y, en la
--- parte final, los objetos y datos específicos de la base de datos `glob_gusters`.
+-- parte final, los objetos y datos específicos de la base de datos del proyecto
+-- (`glob_gusters` por defecto; configurable con GLOB_GUSTERS_DB, ver más abajo).
 --
 -- EJECUCIÓN SEGURA / IDEMPOTENCIA:
 --   Todo el script es de sólo lectura (SELECT/SHOW): no modifica nada, así que se
@@ -13,7 +14,7 @@
 --
 -- TRES LIMITACIONES CONOCIDAS DEL ENTORNO (no son errores del script):
 --   1) Las secciones marcadas más abajo como "requiere la base de datos
---      glob_gusters" fallarán con "ERROR 1046: No database selected" /
+--      glob_gusters" fallarán con "ERROR 1049: Unknown database" /
 --      "Unknown database 'glob_gusters'" si todavía no ejecutaste
 --      sql/mariadb/glob_gusters.sql. Es esperado la primera vez que corres este
 --      script; vuelve a ejecutarlo después de crear la base de datos, o usa
@@ -38,7 +39,20 @@
 --   Ejemplo de ejecución que nunca se detiene por estas tres limitaciones:
 --     mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
 --         --force < sql/mariadb/check-mariadb.sql
+--
+-- CONFIGURACIÓN DESDE EL ARCHIVO .env:
+--   Un archivo SQL no puede leer el .env por sí mismo. Por eso el nombre de la base de
+--   datos del proyecto no está escrito en el script: se toma de la variable de sesión
+--   @glob_gusters_db y, si no está definida, se usa 'glob_gusters'. El lanzador
+--   sql/mariadb/check-mariadb.sh lee GLOB_GUSTERS_HOST, GLOB_GUSTERS_PORT,
+--   GLOB_GUSTERS_USER, GLOB_GUSTERS_PASSWORD y GLOB_GUSTERS_DB del .env (o del entorno),
+--   se conecta con ellos y define @glob_gusters_db antes de ejecutar este script:
+--     sh sql/mariadb/check-mariadb.sh
 -- =====================================================================================
+
+-- Base de datos del proyecto que se revisa en las secciones 7 y 8: el valor que haya
+-- definido el lanzador (a partir de GLOB_GUSTERS_DB) o 'glob_gusters' por defecto.
+SET @db = COALESCE(@glob_gusters_db, 'glob_gusters');
 
 -- ---------------------------------------------------------------------------------
 -- SECCIÓN 1: Identidad y versión del servidor (no requiere ninguna base de datos).
@@ -131,30 +145,43 @@ SELECT host, user, plugin FROM mysql.user;
 
 -- ---------------------------------------------------------------------------------
 -- SECCIÓN 7: Objetos definidos en la base de datos del proyecto.
--- Requiere que `glob_gusters` ya exista (ejecutar primero sql/mariadb/glob_gusters.sql).
+-- Requiere que la base (@db, por defecto `glob_gusters`) ya exista: ejecutar primero
+-- sql/mariadb/glob_gusters.sql.
 -- ---------------------------------------------------------------------------------
-
--- Selecciona `glob_gusters` como base de datos activa para las consultas SHOW
--- que siguen, ya que todas ellas requieren una base de datos seleccionada.
-USE `glob_gusters`;
+-- El nombre de la base viene de @db (GLOB_GUSTERS_DB del .env). USE no admite
+-- parámetros ni sentencias preparadas, así que cada SHOW usa la forma `SHOW ... FROM
+-- <base>` armada con CONCAT y ejecutada con PREPARE/EXECUTE. REPLACE duplica las comillas
+-- invertidas del nombre para que no pueda romper el identificador entre `...`.
 
 -- Tablas de la base de datos del proyecto (deben ser las 11 del modelo, más
 -- cualquier tabla adicional creada por sql/mariadb/commands/01_DDL.sql).
-SHOW TABLES;
+SET @sql = CONCAT('SHOW TABLES FROM `', REPLACE(@db, '`', '``'), '`');
+PREPARE consulta FROM @sql;
+EXECUTE consulta;
+DEALLOCATE PREPARE consulta;
 
 -- Vistas definidas (deben ser v_ejemplares_detalle y v_clientes_con_aval, creadas
 -- por sql/mariadb/commands/04_VDL.sql).
-SHOW FULL TABLES WHERE Table_type = 'VIEW';
+SET @sql = CONCAT('SHOW FULL TABLES FROM `', REPLACE(@db, '`', '``'), '` WHERE Table_type = \'VIEW\'');
+PREPARE consulta FROM @sql;
+EXECUTE consulta;
+DEALLOCATE PREPARE consulta;
 
 -- Triggers definidos (deben ser los tres de reglas de negocio de glob_gusters.sql:
 -- trg_cliente_aval_diferente_insert, trg_cliente_aval_diferente_update y
 -- trg_ejemplar_renta_max_4).
-SHOW TRIGGERS;
+SET @sql = CONCAT('SHOW TRIGGERS FROM `', REPLACE(@db, '`', '``'), '`');
+PREPARE consulta FROM @sql;
+EXECUTE consulta;
+DEALLOCATE PREPARE consulta;
 
 -- Eventos programados (el proyecto no define ninguno; se espera una lista vacía).
 -- Puede fallar con ERROR 1577 si event_scheduler está en OFF (ver nota al inicio
 -- del script); es el valor por defecto de XAMPP y no afecta a este proyecto.
-SHOW EVENTS;
+SET @sql = CONCAT('SHOW EVENTS FROM `', REPLACE(@db, '`', '``'), '`');
+PREPARE consulta FROM @sql;
+EXECUTE consulta;
+DEALLOCATE PREPARE consulta;
 
 -- ---------------------------------------------------------------------------------
 -- SECCIÓN 8: Estado específico del proyecto Glob-Gusters.
@@ -162,7 +189,7 @@ SHOW EVENTS;
 
 -- Confirma en information_schema si la base de datos del proyecto existe (devuelve
 -- una fila si existe, ninguna si aún no se ha creado).
-SELECT SCHEMA_NAME FROM information_schema.schemata WHERE SCHEMA_NAME = 'glob_gusters';
+SELECT SCHEMA_NAME FROM information_schema.schemata WHERE SCHEMA_NAME = @db;
 
 -- Resumen de cada tabla del proyecto con su cantidad aproximada de filas y su
 -- tamaño en disco, para verificar de un vistazo que los datos de prueba se
@@ -172,7 +199,7 @@ SELECT
     table_rows AS Filas_Aprox,
     ROUND((data_length + index_length) / 1024, 1) AS Tamano_KB
 FROM information_schema.tables
-WHERE table_schema = 'glob_gusters'
+WHERE table_schema = @db
 ORDER BY table_name;
 
 -- ---------------------------------------------------------------------------------
