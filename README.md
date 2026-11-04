@@ -141,6 +141,7 @@ glob-gusters-videoclub/
 │   │   ├── glob_gusters.sql             # DDL: base de datos, tablas, constraints y triggers
 │   │   ├── glob_gusters_insert.sql      # DML: datos de prueba para todas las tablas
 │   │   ├── check-mariadb.sql            # Script de diagnóstico del servidor MariaDB
+│   │   ├── check-mariadb.sh             # Lanzador: ejecuta el diagnóstico con la configuración del .env
 │   │   └── commands/
 │   │       ├── 01_DDL.sql               # CREATE / ALTER / DROP de ejemplo
 │   │       ├── 02_DML.sql               # INSERT / UPDATE / DELETE de ejemplo
@@ -265,6 +266,18 @@ las tres limitaciones conocidas del entorno y por qué no son errores del proyec
 ```bash
 mariadb -u root -p -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 \
     --force < sql/mariadb/check-mariadb.sql
+```
+
+**Con la configuración del `.env`:** un archivo SQL no puede leer el `.env`, así que el
+lanzador `sql/mariadb/check-mariadb.sh` lo hace por él. Lee `GLOB_GUSTERS_HOST`,
+`GLOB_GUSTERS_PORT`, `GLOB_GUSTERS_USER`, `GLOB_GUSTERS_PASSWORD` y `GLOB_GUSTERS_DB`
+(el sistema tiene prioridad sobre el `.env`), se conecta con ellos —usa TCP aunque el host
+sea `localhost`— y ya lleva `--force`. El nombre de la base llega al script SQL por la
+variable de sesión `@glob_gusters_db`; si se ejecuta el `.sql` directamente se usa
+`glob_gusters`.
+
+```bash
+sh sql/mariadb/check-mariadb.sh
 ```
 
 ### 3. Ejecutar los scripts en orden
@@ -695,9 +708,28 @@ inexistente, `event_scheduler` apagado y `mysql.proc` desactualizada).
 | 4. Configuración | `SHOW VARIABLES LIKE 'character_set%'`, `'collation%'`, `'sql_mode'`; `SHOW VARIABLES` | Juegos de caracteres, collations y modo SQL. |
 | 5. Motores | `SHOW ENGINES` | Confirma que InnoDB está disponible. |
 | 6. Usuarios | `SELECT host, user, plugin FROM mysql.user` | Cuentas sin exponer el hash de contraseña. |
-| 7. Objetos del proyecto | `USE glob_gusters`; `SHOW TABLES`; `SHOW FULL TABLES WHERE Table_type = 'VIEW'`; `SHOW TRIGGERS`; `SHOW EVENTS` | Tablas, vistas, triggers y eventos (se espera lista vacía). |
-| 8. Estado del proyecto | consulta a `information_schema.schemata` y a `information_schema.tables` | Existencia de la base y filas aproximadas/tamaño en KB por tabla. |
+| 7. Objetos del proyecto | `SHOW TABLES`, `SHOW FULL TABLES ... WHERE Table_type = 'VIEW'`, `SHOW TRIGGERS` y `SHOW EVENTS`, todos con `FROM` la base `@db` (armados con `CONCAT` y ejecutados con `PREPARE`/`EXECUTE`, porque `USE` no admite parámetros) | Tablas, vistas, triggers y eventos (se espera lista vacía). |
+| 8. Estado del proyecto | consulta a `information_schema.schemata` y a `information_schema.tables`, filtradas por `@db` | Existencia de la base y filas aproximadas/tamaño en KB por tabla. |
 | 9. Rutinas | `SHOW PROCEDURE STATUS`; `SHOW FUNCTION STATUS`; `SELECT * FROM information_schema.routines LIMIT 10` | Procedimientos y funciones (el proyecto no define ninguno). |
+
+Al inicio ejecuta `SET @db = COALESCE(@glob_gusters_db, 'glob_gusters')`: el nombre de la
+base sale de `@glob_gusters_db` (que define el lanzador a partir de `GLOB_GUSTERS_DB`) o,
+si no existe, es `glob_gusters`.
+
+#### `check-mariadb.sh` — lanzador con la configuración del `.env`
+
+Script `sh` que ejecuta `check-mariadb.sql` con los datos de conexión del proyecto.
+
+| Elemento | Qué hace |
+|---|---|
+| `RAIZ`, `ENV_ARCHIVO` | Calcula la raíz del proyecto desde la ubicación del script (funciona desde cualquier carpeta) y la ruta del `.env`. |
+| `leer CLAVE DEFECTO` | Busca `CLAVE=valor` en el `.env` con `sed` (admite `export ` y comillas) y devuelve la última coincidencia o el valor por defecto. No usa `source` ni `eval`, así que no ejecuta nada del archivo. |
+| `HOST`, `PORT`, `USUARIO`, `CLAVE`, `BASE` | Resuelven cada variable con la prioridad sistema > `.env` > defecto (`localhost`, `3306`, `root`, vacía, `glob_gusters`). |
+| `[ "$HOST" = "localhost" ] && HOST=127.0.0.1` | Fuerza TCP: con `localhost` el cliente usaría el socket Unix, que puede ser de otro servidor, e ignoraría el puerto. |
+| Búsqueda de `CLIENTE` | Usa `MARIADB_BIN` si está definida; si no, `mariadb` del `PATH`, las rutas de XAMPP en macOS/Linux o `mysql`. Sale con error si no encuentra ninguno. |
+| `MYSQL_PWD` | Pasa la contraseña por variable de entorno (no aparece en la lista de procesos); si está vacía no se define y se conecta sin contraseña. |
+| `BASE_SQL` | Escapa barras y comillas simples del nombre de la base para el literal SQL. |
+| `exec "$CLIENTE" ... --force --init-command="SET @glob_gusters_db = '...'" < check-mariadb.sql` | Ejecuta el cliente con `--force` (las secciones que fallan por limitaciones conocidas no detienen el reporte), define `@glob_gusters_db` al conectar y envía el script SQL por la entrada estándar. |
 
 #### `commands/01_DDL.sql` a `06_TCL.sql` — ejemplos por grupo de comandos SQL
 
@@ -773,8 +805,10 @@ Todos los scripts usan PyMySQL a través de `conexion.py`, con consultas paramet
 
 #### `conexion_mariabd.py`
 
-Ejemplo mínimo con el conector oficial `mariadb` (opcional). Importa `CONFIG` de
-`conexion.py`, abre la conexión con `mariadb.connect(...)` (si falla imprime el error y
+Ejemplo mínimo con el conector oficial `mariadb`. Importa `CONFIG` de `conexion.py` (que
+lee el `.env`), por lo que usuario, contraseña, host, puerto y base salen de las variables
+`GLOB_GUSTERS_*` y no hay valores escritos en el código; convierte `localhost` en `127.0.0.1`
+para conectar por TCP, abre la conexión con `mariadb.connect(...)` (si falla imprime el error y
 sale con código 1), crea un cursor, ejecuta `SELECT * FROM nacionalidad`, imprime
 `ID` y `Nombre` de cada fila y cierra cursor y conexión.
 
