@@ -1,0 +1,20 @@
+# =====================================================================================
+# requirements.txt — Dependencias de Python del proyecto Glob-Gusters Video-Club
+# =====================================================================================
+# Se instalan dentro del entorno virtual (.venv) con:
+#     python3 -m venv .venv
+#     source .venv/bin/activate          (Windows PowerShell: .venv\Scripts\Activate.ps1)
+#     pip install -r requirements.txt
+#
+# Requiere Python 3.9 o superior.
+
+# Conector principal, escrito en Python puro (no necesita compilar nada).
+# Lo usan py/conexion.py y, a través de él, ddl.py, dml.py, dql.py, vdl.py, dcl.py y tcl.py.
+PyMySQL>=1.1
+
+# OPCIONAL — Conector oficial de MariaDB, solo para el ejemplo py/conexion_mariabd.py.
+# Está comentado porque se compila contra MariaDB Connector/C >= 3.3.1 y el que trae
+# XAMPP (3.1.x) es demasiado antiguo: `pip install` falla con él. Para usarlo, instala
+# un Connector/C reciente (macOS: `brew install mariadb-connector-c`; Linux:
+# `libmariadb-dev`), descomenta la línea y vuelve a ejecutar `pip install -r requirements.txt`.
+# mariadb>=1.1
