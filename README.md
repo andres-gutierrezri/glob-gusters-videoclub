@@ -245,9 +245,10 @@ javac -version
 
 ## Guía de ejecución por sistema operativo
 
-Esta guía reúne, para **Windows (PowerShell)**, **macOS** y **Linux**, cómo ejecutar los
-archivos SQL, el diagnóstico, las pruebas, Python y Java. Todas las rutas son relativas a
-la **raíz del proyecto** (la carpeta que contiene `README.md`).
+Esta guía reúne, para **Windows (PowerShell y CMD)**, **macOS** y **Linux**, cómo ejecutar los
+archivos SQL, el diagnóstico, las pruebas, Python y Java. Los pasos 1 a 5 usan PowerShell
+en Windows; el paso 6 es la guía completa para **CMD** (Símbolo del sistema). Todas las
+rutas son relativas a la **raíz del proyecto** (la carpeta que contiene `README.md`).
 
 Convenciones usadas en los comandos:
 
@@ -431,7 +432,123 @@ java -cp "out:lib/*" Dcl          # 05_DCL  (requiere una cuenta administrativa)
 java -cp "out:lib/*" Tcl          # 06_TCL
 ```
 
-### 6. Oracle APEX (opcional)
+### 6. Windows CMD (Símbolo del sistema)
+
+Guía equivalente a las anteriores para quien trabaja en **`cmd.exe`** en lugar de PowerShell.
+Abre el Símbolo del sistema (`Win + R`, escribe `cmd` y pulsa Enter), ve a la raíz del
+proyecto con `cd` y sigue los pasos. Diferencias con PowerShell: las variables se definen con
+`set` y se leen como `%VARIABLE%`, los comentarios son `REM`, la continuación de línea es `^`
+y la redirección de archivos con `<` sí funciona (pasa el contenido tal cual, sin problemas de
+tildes ni `ñ`).
+
+> Los comandos de esta sección usan herramientas estándar de Windows pero **no se ejecutaron
+> en esta máquina** (el proyecto se verificó en macOS). Si tu proyecto está en una carpeta
+> con espacios, entrecomilla las rutas.
+
+```bat
+cd C:\ruta\a\glob-gusters-videoclub
+```
+
+#### 6.1 Archivos SQL
+
+Los 8 scripts, en orden (el servidor de XAMPP debe estar en marcha, módulo **MySQL** en
+verde). El comando `for` va en una sola instrucción; el `^` al final de línea la continúa:
+
+```bat
+set MARIADB=C:\xampp\mysql\bin\mariadb.exe
+
+for %f in (sql\mariadb\glob_gusters.sql sql\mariadb\glob_gusters_insert.sql ^
+           sql\mariadb\commands\01_DDL.sql sql\mariadb\commands\02_DML.sql ^
+           sql\mariadb\commands\03_DQL.sql sql\mariadb\commands\04_VDL.sql ^
+           sql\mariadb\commands\05_DCL.sql sql\mariadb\commands\06_TCL.sql) do ^
+    @echo ^>^>^> %f & "%MARIADB%" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < "%f"
+```
+
+- Si `root` tiene contraseña, define antes `set MYSQL_PWD=tu_clave` (sin comillas ni espacios
+  alrededor del `=`) o agrega `-p` al comando (la pedirá en cada script).
+- Si pones estos comandos dentro de un archivo `.bat`, duplica el signo de porcentaje:
+  `%%f` en lugar de `%f`.
+- Para ejecutar un solo archivo:
+  `"%MARIADB%" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < sql\mariadb\glob_gusters.sql`
+
+#### 6.2 Diagnóstico y pruebas
+
+```bat
+REM Diagnóstico del servidor (solo lectura; usa la base glob_gusters)
+"%MARIADB%" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force < sql\mariadb\check-mariadb.sql
+
+REM Con otra base: agrega --init-command="SET @glob_gusters_db = 'mi_base'"
+
+REM Pruebas de integridad (después de los 8 scripts; esperan 3 líneas ERROR y "PROYECTO OK")
+"%MARIADB%" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters < tests\mariadb\glob_gusters_test.sql
+```
+
+El lanzador `sql\mariadb\check-mariadb.sh` no se puede usar en CMD (es un script `sh`); en
+su lugar se usa el comando anterior, o **Git Bash** si quieres que lea el `.env`.
+
+#### 6.3 Python
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+pip install -r requirements.txt
+copy .env.example .env
+REM (edita .env si tu root tiene contraseña: GLOB_GUSTERS_PASSWORD=...)
+
+python py\conexion.py
+python py\ddl.py
+python py\dml.py
+python py\dql.py
+python py\vdl.py
+python py\dcl.py
+python py\tcl.py
+python py\conexion_mariabd.py
+```
+
+- Al activar el entorno el indicador cambia a `(.venv) C:\...>`. Para salir: `deactivate`.
+- Si `python` no se reconoce, prueba con `py -m venv .venv` (lanzador de Python para Windows).
+- `copy .env.example .env` solo se hace una vez; si `.env` ya existe, pregunta antes de
+  sobrescribirlo.
+- `requirements.txt` incluye `mariadb`, que necesita MariaDB Connector/C (ver «Dependencias
+  requeridas»); si solo usas PyMySQL, comenta esa línea antes de instalar.
+
+#### 6.4 Java
+
+```bat
+cd java
+mkdir lib
+curl -L -o lib\mariadb-java-client-3.5.3.jar https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/3.5.3/mariadb-java-client-3.5.3.jar
+javac -encoding UTF-8 -d out *.java
+
+java -cp "out;lib/*" Conexion
+java -cp "out;lib/*" Ddl
+java -cp "out;lib/*" Dml
+java -cp "out;lib/*" Dql
+java -cp "out;lib/*" Vdl
+java -cp "out;lib/*" Dcl
+java -cp "out;lib/*" Tcl
+```
+
+- El separador del classpath en Windows es `;` (y va entre comillas).
+- `curl` viene incluido en Windows 10 (1803) y posteriores; si no lo tienes, descarga el JAR
+  desde el enlace en el navegador y guárdalo en `java\lib\`.
+- Para ejecutar una sola consulta: `java -cp "out;lib/*" Dql disponibles`; para eliminar las
+  vistas: `java -cp "out;lib/*" Vdl --drop`.
+- El programa encuentra el `.env` de la raíz estando dentro de `java\`.
+
+#### 6.5 Si las tildes o la `ñ` se ven mal en la consola
+
+La consola de CMD usa por defecto una página de códigos antigua. Antes de ejecutar los
+programas, cambia a UTF-8 (solo afecta a esa ventana):
+
+```bat
+chcp 65001
+```
+
+Esto solo afecta a **cómo se muestra** el texto; los datos en la base están guardados
+correctamente en `utf8mb4`.
+
+### 7. Oracle APEX (opcional)
 
 No requiere instalar nada en el equipo: en *SQL Workshop → SQL Scripts* de tu workspace,
 sube y ejecuta los archivos de `sql/oracle_apex/` en el orden indicado en la sección
