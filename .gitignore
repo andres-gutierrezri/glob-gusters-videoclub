@@ -1,28 +1,81 @@
-# Configuración local / entorno
-.env
-*.log
+# =====================================================================================
+# .gitignore — Glob-Gusters Video-Club
+# Excluye del control de versiones lo que se genera localmente o contiene datos
+# privados. Los scripts .sql, el código fuente, requirements.txt y .env.example SÍ
+# se versionan.
+# =====================================================================================
 
-# Registros de ejecución del proyecto (no se versionan)
+# -------------------------------------------------------------------------------------
+# Configuración local y secretos
+# -------------------------------------------------------------------------------------
+# Variables reales de conexión (contraseñas). La plantilla .env.example sí se versiona.
+.env
+.env.*
+!.env.example
+
+# -------------------------------------------------------------------------------------
+# Registros de ejecución
+# -------------------------------------------------------------------------------------
+*.log
 /logs/
 
-# XAMPP / MySQL
+# -------------------------------------------------------------------------------------
+# SQL / MariaDB / MySQL / XAMPP / Oracle
+# -------------------------------------------------------------------------------------
+# Archivos de datos que genera el propio servidor (XAMPP).
 *.ibd
 *.frm
 *.err
-
-# Visual Studio Code
-.vscode/
-*.code-workspace
-
+*.pid
+ib_logfile*
+ibdata*
+# Historial de comandos de los clientes de consola.
+.mysql_history
+.mariadb_history
+.sqlplus_history
+# Volcados y respaldos locales (el esquema oficial vive en sql/, no en un dump).
+*.dump
+*.sql.gz
+*.sql.zip
+*.sql.bak
+# Resultados temporales de herramientas de Oracle (SQL*Plus, trazas).
+*.lst
+*.trc
 # MySQL Workbench
 *.mwb.bak
 *.mwbhistory/
 
+# -------------------------------------------------------------------------------------
 # Python
+# -------------------------------------------------------------------------------------
+# Entorno virtual (se recrea con `python3 -m venv .venv && pip install -r requirements.txt`).
+.venv/
+venv/
+env/
+# Código compilado y cachés.
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+.coverage
+htmlcov/
+# Empaquetado y compilación.
+build/
+dist/
+*.egg-info/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+# Jupyter
+.ipynb_checkpoints/
 
-# Java: compilación
+# -------------------------------------------------------------------------------------
+# Java
+# -------------------------------------------------------------------------------------
+# Compilación (las clases se generan con `javac -d out`).
 java/out/
 java/bin/
 java/target/
@@ -33,15 +86,12 @@ java/build/
 *.ear
 hs_err_pid*
 replay_pid*
-
-# Java: dependencias descargables (driver JDBC)
+# Dependencias descargables (driver JDBC; ver README).
 java/lib/
-
-# Java: Maven / Gradle
+# Maven / Gradle
 .gradle/
 .mvn/wrapper/maven-wrapper.jar
-
-# Java: configuración de IDE (IntelliJ IDEA, Eclipse, NetBeans)
+# Configuración de IDE (IntelliJ IDEA, Eclipse, NetBeans)
 .idea/
 *.iml
 .classpath
@@ -50,10 +100,17 @@ java/lib/
 .factorypath
 nbproject/
 
-# Sistema operativo
+# -------------------------------------------------------------------------------------
+# Editores
+# -------------------------------------------------------------------------------------
+.vscode/
+*.code-workspace
+
+# -------------------------------------------------------------------------------------
+# Sistema operativo y temporales
+# -------------------------------------------------------------------------------------
 Thumbs.db
 .DS_Store
-
-# Exportaciones temporales de respaldo
 *.bak
 *.tmp
+*.swp
