@@ -555,6 +555,24 @@ sube y ejecuta los archivos de `sql/oracle_apex/` en el orden indicado en la sec
 «Versión para Oracle APEX». Con SQL*Plus o SQLcl (en cualquier sistema operativo) el
 equivalente es `@sql/oracle_apex/00_glob_gusters_oracle_apex.sql`, etc.
 
+### Probar la creación desde cero sin tocar tu base
+
+Para comprobar que los scripts funcionan sobre un servidor vacío sin eliminar tu base
+`glob_gusters`, levanta una segunda instancia de MariaDB con datos temporales (ejemplo de
+macOS con XAMPP; ajusta las rutas en otros sistemas):
+
+```bash
+B=/Applications/XAMPP/xamppfiles; T=$(mktemp -d)
+$B/bin/mysql_install_db --no-defaults --basedir=$B --datadir=$T/data \
+    --auth-root-authentication-method=normal --skip-test-db
+$B/sbin/mysqld --no-defaults --basedir=$B --datadir=$T/data --port=3399 \
+    --bind-address=127.0.0.1 --socket=/tmp/gg3399.sock --pid-file=$T/mysqld.pid &
+# ... ejecuta los scripts con -P 3399; Python, Java y check-mariadb.sh con GLOB_GUSTERS_PORT=3399 ...
+$B/bin/mariadb-admin -u root -h 127.0.0.1 -P 3399 shutdown; rm -rf "$T" /tmp/gg3399.sock
+```
+
+El socket debe tener una ruta corta (el límite es de 103 caracteres), por eso se usa `/tmp`.
+
 ### Errores frecuentes
 
 | Mensaje | Causa y solución |
@@ -589,14 +607,13 @@ registro de lo comprobado, no una garantía para otros equipos.
 | `java/` (`Conexion`, `Ddl`, `Dml`, `Dql` con sus 4 consultas, `Vdl`, `Dcl`, `Tcl`) | Compilan (también con `javac -Xlint:all`, sin avisos) y las 7 clases terminan sin errores; `Vdl --drop` también se probó y se restauró. |
 | Python frente a Java | Las salidas de `dql`, `vdl`, `dml`, `tcl` y `dcl` son idénticas en ambos lenguajes (Java imprime `null` donde Python imprime `None`). |
 | Estática | `py_compile` con `-W error`, `sh -n` sobre `check-mariadb.sh` y `javac -Xlint:all` sin avisos; todas las rutas de archivos citadas en este README existen. |
+| Creación desde cero | En una instancia de MariaDB 10.4.28 nueva y vacía (datos temporales, puerto 3399): los 8 scripts terminan sin errores, quedan 11 tablas, 2 vistas, 3 triggers y las 2 cuentas de ejemplo, los conteos de filas coinciden con la tabla «Datos de prueba» y pasan las 23 pruebas; luego Python, Java y el diagnóstico también funcionan. Con la base aún inexistente, Python y Java sin traza piden ejecutar `glob_gusters.sql` (error 1049). |
 | Rutas de error | Una consulta desconocida (`dql inexistente`) sale con código 1 y lista las opciones; una contraseña incorrecta (o ausente) sale con código 1 y un mensaje claro, en Python y en Java; Python y Java se pueden lanzar desde otra carpeta. |
 
 Notas sobre lo que **no** quedó comprobado:
 
 - Los comandos de Windows y Linux de la guía no se ejecutaron en esa máquina.
 - Los scripts de `sql/oracle_apex/` no se ejecutaron (no hay un Oracle disponible).
-- Los scripts se repitieron sobre la base ya creada (son idempotentes); no se probó la creación
-  desde una base inexistente en esa ejecución.
 
 ## Ejecución paso a paso en XAMPP MariaDB
 
@@ -1242,7 +1259,7 @@ ejecución: ver «Conexión y consultas desde Java».
 | `HOST`, `PORT`, `USER`, `PASSWORD`, `DB` | Constantes de configuración obtenidas con `env(...)` (el puerto se convierte con `Integer.parseInt`). |
 | `env(nombre, defecto)` | Devuelve primero la variable del sistema, luego la del `.env` y por último el valor por defecto. |
 | `cargarEnv()` | Busca `.env` en el directorio actual y, si no está, en el padre; lee cada línea, ignora vacías/comentarios/sin `=`, quita `export ` de la clave y las comillas del valor, y usa solo el primer archivo encontrado. Si no puede leerlo, avisa por `stderr`. |
-| `conectar()` / `conectar(usuario, clave)` | Arma la URL `jdbc:mariadb://host:puerto/base?characterEncoding=utf8`, abre la conexión y apaga el autocommit. Ante el error 1045 imprime en `stderr` el mismo mensaje que Python (sin contraseña / usuario o contraseña incorrectos, con usuario, host y puerto, sin mostrar la clave) y sale con código 1; el 1049 lo traduce a `IllegalStateException` pidiendo crear la base, y relanza los demás. (La línea `[ WARN]` que aparece antes es del propio driver JDBC.) |
+| `conectar()` / `conectar(usuario, clave)` | Arma la URL `jdbc:mariadb://host:puerto/base?characterEncoding=utf8`, abre la conexión y apaga el autocommit. Ante el error 1045 imprime en `stderr` el mismo mensaje que Python (sin contraseña / usuario o contraseña incorrectos, con usuario, host y puerto, sin mostrar la clave) y sale con código 1; el 1049 (base inexistente) imprime en `stderr` que hay que ejecutar primero `glob_gusters.sql` y `glob_gusters_insert.sql` y también sale con código 1; relanza los demás. (La línea `[ WARN]` que aparece antes es del propio driver JDBC.) |
 | `consultar(con, sql, params...)` | Prepara y ejecuta un `SELECT`/`SHOW` y devuelve una lista de mapas columna→valor en orden; las columnas `YEAR` se leen como `Integer` para mostrar solo el año. |
 | `ejecutar(con, sql, params...)` | Ejecuta una escritura con `executeUpdate()` y devuelve las filas afectadas (sin commit). |
 | `preparar(...)` | Crea el `PreparedStatement` y asigna los parámetros por posición (desde 1). |
