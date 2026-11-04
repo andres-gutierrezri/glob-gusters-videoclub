@@ -4,6 +4,11 @@ Lista el contenido de la tabla `nacionalidad`. A diferencia del resto de scripts
 (que usan PyMySQL a través de conexion.py), este usa el paquete `mariadb`, que es
 opcional: está comentado en requirements.txt porque necesita MariaDB Connector/C >= 3.3.1.
 
+Configuración: no tiene valores escritos en el código. Usuario, contraseña, host, puerto y
+base de datos salen de las variables de entorno GLOB_GUSTERS_HOST, GLOB_GUSTERS_PORT,
+GLOB_GUSTERS_USER, GLOB_GUSTERS_PASSWORD y GLOB_GUSTERS_DB, que conexion.py lee del
+archivo `.env` de la raíz (una variable ya definida en el sistema tiene prioridad).
+
 Uso:
     python py/conexion_mariabd.py
 """
