@@ -1,5 +1,7 @@
+// Conexión JDBC y excepción de errores SQL.
 import java.sql.Connection;
 import java.sql.SQLException;
+// Lista inmutable para las sentencias.
 import java.util.List;
 
 /**
@@ -10,8 +12,10 @@ import java.util.List;
  */
 public class Ddl {
 
+    // Sentencias DDL en el orden en que se ejecutan. Los bloques """ son text blocks (Java 15+).
     static final List<String> SENTENCIAS = List.of(
             // CREATE: tabla de prueba para demostrar CREATE TABLE.
+            // IF NOT EXISTS evita el error si la tabla ya existe (re-ejecución segura).
             """
             CREATE TABLE IF NOT EXISTS `tabla_prueba` (
                 `Tabla_Prueba_ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -20,6 +24,7 @@ public class Ddl {
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci
               COMMENT = 'Tabla temporal usada únicamente para demostrar sentencias DDL.'""",
             // ALTER: correo del socio.
+            // ADD COLUMN IF NOT EXISTS agrega la columna solo si todavía no existe.
             """
             ALTER TABLE `cliente`
                 ADD COLUMN IF NOT EXISTS `Email` VARCHAR(120) NULL
@@ -30,6 +35,7 @@ public class Ddl {
                 ADD COLUMN IF NOT EXISTS `Duracion_Minutos` SMALLINT UNSIGNED NULL
                 COMMENT 'Duración de la película en minutos.'""",
             // ALTER: amplía el teléfono para indicativos internacionales.
+            // MODIFY COLUMN cambia el tipo de una columna existente (de VARCHAR(20) a VARCHAR(25)).
             """
             ALTER TABLE `cliente`
                 MODIFY COLUMN `Telefono` VARCHAR(25) NOT NULL
@@ -40,14 +46,20 @@ public class Ddl {
             "DROP TABLE IF EXISTS `tabla_prueba`");
 
     public static void main(String[] args) throws SQLException {
+        // Abre la conexión (cuenta por defecto) y la cierra automáticamente al terminar.
         try (Connection con = Conexion.conectar()) {
+            // Ejecuta cada sentencia DDL en orden.
             for (String sql : SENTENCIAS) {
                 Conexion.ejecutar(con, sql);
+                // Resumen: espacios múltiples colapsados en uno solo y máximo 90 caracteres.
                 String resumen = sql.trim().replaceAll("\\s+", " ");
                 System.out.println("OK: " + resumen.substring(0, Math.min(90, resumen.length())));
             }
+            // Confirma los cambios (en MariaDB el DDL ya confirma implícitamente).
             con.commit();
 
+            // Verifica el resultado consultando el diccionario del servidor (information_schema).
+            // DATABASE() = base actual; el filtro IN compara pares (tabla, columna).
             Conexion.imprimir("Columnas agregadas", Conexion.consultar(con, """
                     SELECT table_name AS tabla, column_name AS columna, column_type AS tipo
                     FROM information_schema.columns
