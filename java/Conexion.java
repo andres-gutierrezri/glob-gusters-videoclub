@@ -127,11 +127,21 @@ public class Conexion {
             con.setAutoCommit(false);
             return con;
         } catch (SQLException error) {
-            // Error 1045 = acceso denegado. Si además no se envió contraseña, se orienta al usuario.
-            if (error.getErrorCode() == 1045 && claveSegura.isEmpty()) {
-                throw new SQLException("Acceso denegado para '" + usuario + "' sin contraseña: define "
-                        + "GLOB_GUSTERS_PASSWORD en el archivo .env (ver .env.example).",
-                        error.getSQLState(), error.getErrorCode(), error);
+            // Error 1045 = acceso denegado. Se explica el motivo probable, sin mostrar la traza
+            // técnica y sin imprimir nunca la contraseña, y se sale con código 1.
+            if (error.getErrorCode() == 1045) {
+                String destino = "'" + usuario + "' en " + HOST + ":" + PORT;
+                if (claveSegura.isEmpty()) {
+                    // No se envió contraseña: el usuario probablemente sí la necesita.
+                    System.err.println("Acceso denegado para " + destino + " sin contraseña: define "
+                            + "GLOB_GUSTERS_PASSWORD en el archivo .env (ver .env.example).");
+                } else {
+                    // Se envió una contraseña y el servidor la rechazó: usuario o clave incorrectos.
+                    System.err.println("Acceso denegado para " + destino + ": el usuario o la contraseña son "
+                            + "incorrectos. Revisa GLOB_GUSTERS_USER y GLOB_GUSTERS_PASSWORD en el "
+                            + "archivo .env (ver .env.example) o en las variables de entorno.");
+                }
+                System.exit(1);
             }
             // Error 1049 = la base de datos no existe todavía.
             if (error.getErrorCode() == 1049) {

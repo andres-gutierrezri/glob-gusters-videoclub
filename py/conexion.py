@@ -91,12 +91,20 @@ def conectar(**cambios):
         # Abre la conexión con autocommit apagado: las escrituras quedan en una transacción.
         return pymysql.connect(**datos, autocommit=False)
     except pymysql.err.OperationalError as error:
-        # Error 1045 = acceso denegado. Si además no se envió contraseña, se orienta al usuario.
-        if error.args[0] == 1045 and not datos["password"]:
-            raise SystemExit(
-                f"Acceso denegado para '{datos['user']}' sin contraseña: define "
-                "GLOB_GUSTERS_PASSWORD en el archivo .env (ver .env.example)."
-            ) from error
+        # Error 1045 = acceso denegado. Se explica el motivo probable sin mostrar la traza
+        # técnica y sin imprimir nunca la contraseña.
+        if error.args[0] == 1045:
+            destino = f"'{datos['user']}' en {datos['host']}:{datos['port']}"
+            if not datos["password"]:
+                # No se envió contraseña: el usuario probablemente sí la necesita.
+                motivo = (f"Acceso denegado para {destino} sin contraseña: define "
+                          "GLOB_GUSTERS_PASSWORD en el archivo .env (ver .env.example).")
+            else:
+                # Se envió una contraseña y el servidor la rechazó: usuario o clave incorrectos.
+                motivo = (f"Acceso denegado para {destino}: el usuario o la contraseña son "
+                          "incorrectos. Revisa GLOB_GUSTERS_USER y GLOB_GUSTERS_PASSWORD en el "
+                          "archivo .env (ver .env.example) o en las variables de entorno.")
+            raise SystemExit(motivo) from error
         # Error 1049 = la base de datos no existe todavía.
         if error.args[0] == 1049:
             raise SystemExit(
