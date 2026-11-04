@@ -143,10 +143,12 @@ public class Conexion {
                 }
                 System.exit(1);
             }
-            // Error 1049 = la base de datos no existe todavía.
+            // Error 1049 = la base de datos no existe todavía. Se explica qué hacer, sin traza
+            // técnica, y se sale con código 1 (igual que hace py/conexion.py).
             if (error.getErrorCode() == 1049) {
-                throw new IllegalStateException("La base de datos no existe todavía: ejecuta primero "
-                        + "sql/mariadb/glob_gusters.sql y glob_gusters_insert.sql (ver README).", error);
+                System.err.println("La base de datos no existe todavía: ejecuta primero "
+                        + "sql/mariadb/glob_gusters.sql y glob_gusters_insert.sql (ver README).");
+                System.exit(1);
             }
             // Cualquier otro error se propaga sin modificar.
             throw error;
