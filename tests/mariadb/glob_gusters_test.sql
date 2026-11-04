@@ -11,6 +11,14 @@
 -- bandera --force para poder seguir evaluando después de esos errores esperados, y
 -- cada prueba negativa se verifica y se limpia con una consulta posterior.
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP). No está
+--     pensado para MySQL de Oracle: usa sintaxis propia de MariaDB (IF NOT EXISTS en
+--     ADD COLUMN / CREATE INDEX / CREATE TRIGGER, CHECK y CREATE OR REPLACE VIEW).
+--   * Cliente `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema
+--     operativo (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas»
+--     y «Guía de ejecución por sistema operativo».
+--
 -- CÓMO SE EJECUTA (obligatorio usar --force, ver motivo arriba):
 --   Debe correrse DESPUÉS de haber ejecutado, en orden, los ocho scripts descritos en
 --   el README (glob_gusters.sql, glob_gusters_insert.sql y commands/01 a 06).

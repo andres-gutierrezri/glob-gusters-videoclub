@@ -4,6 +4,14 @@
 -- Incluye: INSERT (nuevo socio), UPDATE (cambio de estado de un ejemplar) y
 -- DELETE (eliminación de un registro de reparto).
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP). No está
+--     pensado para MySQL de Oracle: usa sintaxis propia de MariaDB (IF NOT EXISTS en
+--     ADD COLUMN / CREATE INDEX / CREATE TRIGGER, CHECK y CREATE OR REPLACE VIEW).
+--   * Cliente `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema
+--     operativo (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas»
+--     y «Guía de ejecución por sistema operativo».
+--
 -- CÓMO SE EJECUTA:
 --   Debe correrse DESPUÉS de glob_gusters_insert.sql (los datos de ejemplo ya deben
 --   existir) y de 01_DDL.sql (la columna `Email` de `cliente` ya debe existir).

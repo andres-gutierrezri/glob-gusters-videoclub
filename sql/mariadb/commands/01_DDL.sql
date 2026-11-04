@@ -3,6 +3,14 @@
 -- Objetivo: definir y modificar la estructura de la base de datos Glob-Gusters.
 -- Incluye: CREATE, ALTER (agregar/modificar columnas) y DROP (eliminar tabla de prueba).
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP). No está
+--     pensado para MySQL de Oracle: usa sintaxis propia de MariaDB (IF NOT EXISTS en
+--     ADD COLUMN / CREATE INDEX / CREATE TRIGGER, CHECK y CREATE OR REPLACE VIEW).
+--   * Cliente `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema
+--     operativo (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas»
+--     y «Guía de ejecución por sistema operativo».
+--
 -- CÓMO SE EJECUTA:
 --   Debe correrse DESPUÉS de sql/mariadb/glob_gusters.sql (las tablas base ya deben
 --   existir) y ANTES de 02_DML.sql, porque aquí se agregan columnas que los scripts

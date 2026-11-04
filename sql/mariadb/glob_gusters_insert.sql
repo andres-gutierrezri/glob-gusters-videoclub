@@ -8,6 +8,14 @@
 -- primero los catálogos (nacionalidad, productora, estado), luego director/actor/
 -- pelicula, después reparto, cliente, ejemplar, renta y finalmente ejemplar_renta.
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP). No está
+--     pensado para MySQL de Oracle: usa sintaxis propia de MariaDB (IF NOT EXISTS en
+--     ADD COLUMN / CREATE INDEX / CREATE TRIGGER, CHECK y CREATE OR REPLACE VIEW).
+--   * Cliente `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema
+--     operativo (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas»
+--     y «Guía de ejecución por sistema operativo».
+--
 -- EJECUCIÓN SEGURA / IDEMPOTENCIA:
 --   Este script puede ejecutarse varias veces sobre la misma base de datos sin crear
 --   filas duplicadas ni lanzar errores. Para lograrlo:

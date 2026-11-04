@@ -3,6 +3,12 @@
 -- Objetivo: consultar los datos ya cargados para verificar que todo esté correcto.
 -- Incluye: SELECT con condiciones, JOIN entre tablas y GROUP BY con conteos.
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP) y cliente
+--     `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema operativo
+--     (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas» y «Guía de
+--     ejecución por sistema operativo».
+--
 -- CÓMO SE EJECUTA:
 --   Debe correrse DESPUÉS de 02_DML.sql, ya que consulta datos y columnas
 --   (Email, Duracion_Minutos, Estado_ID actualizado) generados en los scripts previos.

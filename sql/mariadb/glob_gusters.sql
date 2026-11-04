@@ -8,6 +8,14 @@
 -- Tercera Forma Normal (3FN) del ejercicio "Video-Clubs Glob-Gusters", basado en el
 -- taller resuelto en docs/relational-database.pdf.
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP). No está
+--     pensado para MySQL de Oracle: usa sintaxis propia de MariaDB (IF NOT EXISTS en
+--     ADD COLUMN / CREATE INDEX / CREATE TRIGGER, CHECK y CREATE OR REPLACE VIEW).
+--   * Cliente `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema
+--     operativo (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas»
+--     y «Guía de ejecución por sistema operativo».
+--
 -- Reglas de normalización aplicadas:
 --   1FN: todos los atributos son atómicos (no se admiten campos multivaluados; los
 --        campos originalmente multivaluados -Nacionalidad, Productora, Estado- se

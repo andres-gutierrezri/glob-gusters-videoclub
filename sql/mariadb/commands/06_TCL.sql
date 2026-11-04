@@ -5,6 +5,14 @@
 -- Equivalente al ejemplo de "registrar contratos y firmas" del resumen de comandos,
 -- adaptado a "registrar una renta junto con los ejemplares que se lleva el cliente".
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP). No está
+--     pensado para MySQL de Oracle: usa sintaxis propia de MariaDB (IF NOT EXISTS en
+--     ADD COLUMN / CREATE INDEX / CREATE TRIGGER, CHECK y CREATE OR REPLACE VIEW).
+--   * Cliente `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema
+--     operativo (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas»
+--     y «Guía de ejecución por sistema operativo».
+--
 -- CÓMO SE EJECUTA:
 --   Debe correrse AL FINAL, después de 05_DCL.sql, cuando ya existen clientes y
 --   ejemplares disponibles para poder registrar una renta de ejemplo.

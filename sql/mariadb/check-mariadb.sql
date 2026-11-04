@@ -7,6 +7,12 @@
 -- parte final, los objetos y datos específicos de la base de datos del proyecto
 -- (`glob_gusters` por defecto; configurable con GLOB_GUSTERS_DB, ver más abajo).
 --
+-- REQUISITOS:
+--   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP) y cliente
+--     `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema operativo
+--     (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas» y «Guía de
+--     ejecución por sistema operativo».
+--
 -- EJECUCIÓN SEGURA / IDEMPOTENCIA:
 --   Todo el script es de sólo lectura (SELECT/SHOW): no modifica nada, así que se
 --   puede ejecutar tantas veces como se quiera, en cualquier momento, sin ningún
