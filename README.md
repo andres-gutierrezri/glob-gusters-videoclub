@@ -585,8 +585,10 @@ registro de lo comprobado, no una garantía para otros equipos.
 | Los 8 scripts SQL de `sql/mariadb/` en orden | Los 8 terminan sin errores (código 0). |
 | `tests/mariadb/glob_gusters_test.sql` | 23 de 23 pruebas aprobadas, **PROYECTO OK**. Las 3 líneas `ERROR` que imprime (auto-aval, quinto ejemplar y fechas inválidas) son los rechazos esperados. |
 | `sql/mariadb/check-mariadb.sh` | Termina bien. Solo aparecen 3 errores 1558 (`mysql.proc` desactualizada), documentados en el encabezado del script. |
-| `py/conexion.py`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd.py` | Los 8 terminan sin errores. |
-| `java/` (`Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl`, `Tcl`) | Compilan y las 7 clases terminan sin errores. |
+| `py/conexion.py`, `ddl`, `dml`, `dql` (sus 4 consultas por nombre), `vdl`, `dcl`, `tcl` y `conexion_mariabd.py` | Los 8 terminan sin errores. `vdl.py --drop` elimina las 2 vistas y volver a ejecutar `vdl.py` las restaura. |
+| `java/` (`Conexion`, `Ddl`, `Dml`, `Dql` con sus 4 consultas, `Vdl`, `Dcl`, `Tcl`) | Compilan (también con `javac -Xlint:all`, sin avisos) y las 7 clases terminan sin errores; `Vdl --drop` también se probó y se restauró. |
+| Python frente a Java | Las salidas de `dql`, `vdl`, `dml`, `tcl` y `dcl` son idénticas en ambos lenguajes (Java imprime `null` donde Python imprime `None`). |
+| Estática | `py_compile` con `-W error`, `sh -n` sobre `check-mariadb.sh` y `javac -Xlint:all` sin avisos; todas las rutas de archivos citadas en este README existen. |
 | Rutas de error | Una consulta desconocida (`dql inexistente`) sale con código 1 y lista las opciones; una contraseña incorrecta (o ausente) sale con código 1 y un mensaje claro, en Python y en Java; Python y Java se pueden lanzar desde otra carpeta. |
 
 Notas sobre lo que **no** quedó comprobado:
@@ -1199,7 +1201,7 @@ Todos los scripts usan PyMySQL a través de `conexion.py`, con consultas paramet
 | `_cargar_env(ruta)` | Si el `.env` existe, lo lee línea por línea; ignora vacías, comentarios y líneas sin `=`; quita el prefijo `export `; separa en el primer `=`; y usa `os.environ.setdefault` para no pisar variables ya definidas en el sistema (quita comillas del valor). |
 | `_cargar_env(Path(__file__)...parent.parent / ".env")` | La ejecuta al importar el módulo, apuntando al `.env` de la raíz. |
 | `CONFIG` | Diccionario de parámetros: `host` (`localhost`), `port` (entero, `3306`), `user` (`root`), `password` (vacía por defecto), `database` (`glob_gusters`), `charset` `utf8mb4` y `cursorclass` `DictCursor`. |
-| `conectar(**cambios)` | Mezcla `CONFIG` con los cambios; normaliza la contraseña `None` a `""`; abre la conexión con `autocommit=False`. Ante `OperationalError` 1045 (acceso denegado) sale sin traza con un mensaje que indica usuario, host y puerto: «sin contraseña» (apunta a `GLOB_GUSTERS_PASSWORD` del `.env`) si no se envió clave, o «el usuario o la contraseña son incorrectos» (apunta a `GLOB_GUSTERS_USER` y `GLOB_GUSTERS_PASSWORD`) si se envió; nunca imprime la contraseña. Ante 1049 (base inexistente) sale pidiendo ejecutar los SQL de creación; cualquier otro error se relanza. |
+| `conectar(**cambios)` | Mezcla `CONFIG` con los cambios; normaliza la contraseña `None` a `""`; abre la conexión con `autocommit=False` y la bandera `CLIENT.FOUND_ROWS`, para que un `UPDATE` informe las filas que coinciden con el `WHERE` (igual que el driver JDBC de Java y el cliente de MariaDB) y las salidas de Python y Java sean idénticas. Ante `OperationalError` 1045 (acceso denegado) sale sin traza con un mensaje que indica usuario, host y puerto: «sin contraseña» (apunta a `GLOB_GUSTERS_PASSWORD` del `.env`) si no se envió clave, o «el usuario o la contraseña son incorrectos» (apunta a `GLOB_GUSTERS_USER` y `GLOB_GUSTERS_PASSWORD`) si se envió; nunca imprime la contraseña. Ante 1049 (base inexistente) sale pidiendo ejecutar los SQL de creación; cualquier otro error se relanza. |
 | `conexion(**cambios)` | Context manager: entrega la conexión con `yield` y la cierra en `finally`. |
 | `consultar(con, sql, params)` | Ejecuta un `SELECT`/`SHOW` y devuelve todas las filas como lista de diccionarios. |
 | `ejecutar(con, sql, params)` | Ejecuta una escritura sin hacer commit y devuelve las filas afectadas. |
