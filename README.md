@@ -442,7 +442,8 @@ equivalente es `@sql/oracle_apex/00_glob_gusters_oracle_apex.sql`, etc.
 
 | Mensaje | Causa y solución |
 |---|---|
-| `Access denied for user 'root'@'localhost'` | Tu `root` tiene contraseña o estás conectando a otro servidor. Define `GLOB_GUSTERS_PASSWORD` en `.env` (Python/Java) o agrega `-p` (SQL). Si tienes además MySQL de Oracle instalado, usa `-h 127.0.0.1 -P 3306` para no caer en su socket. |
+| `Acceso denegado para 'root' en localhost:3306 sin contraseña` (Python/Java) o `Access denied for user 'root'@'localhost'` (SQL) | El usuario tiene contraseña y no se envió. Define `GLOB_GUSTERS_PASSWORD` en `.env` (Python/Java) o agrega `-p` (SQL). |
+| `Acceso denegado para ...: el usuario o la contraseña son incorrectos` | Se envió una contraseña y el servidor la rechazó: revisa `GLOB_GUSTERS_USER` y `GLOB_GUSTERS_PASSWORD` en el `.env` o en las variables del sistema. Si además tienes MySQL de Oracle instalado, comprueba que conectas al servidor correcto (`-h 127.0.0.1 -P 3306`) y no a su socket. |
 | `Unknown database 'glob_gusters'` / error 1049 | Aún no ejecutaste `glob_gusters.sql` (paso 1). |
 | `requires MariaDB Connector/C >= 3.3.1` al hacer `pip install` | Falta el Connector/C del sistema (ver tabla de instalación) o comenta `mariadb` en `requirements.txt`. |
 | `ModuleNotFoundError: No module named 'pymysql'` | No activaste el entorno virtual o no ejecutaste `pip install -r requirements.txt`. |
@@ -469,7 +470,7 @@ registro de lo comprobado, no una garantía para otros equipos.
 | `sql/mariadb/check-mariadb.sh` | Termina bien. Solo aparecen 3 errores 1558 (`mysql.proc` desactualizada), documentados en el encabezado del script. |
 | `py/conexion.py`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd.py` | Los 8 terminan sin errores. |
 | `java/` (`Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl`, `Tcl`) | Compilan y las 7 clases terminan sin errores. |
-| Rutas de error | Una consulta desconocida (`dql inexistente`) sale con código 1 y lista las opciones; una contraseña incorrecta es rechazada por el servidor; Python y Java se pueden lanzar desde otra carpeta. |
+| Rutas de error | Una consulta desconocida (`dql inexistente`) sale con código 1 y lista las opciones; una contraseña incorrecta (o ausente) sale con código 1 y un mensaje claro, en Python y en Java; Python y Java se pueden lanzar desde otra carpeta. |
 
 Notas sobre lo que **no** quedó comprobado:
 
@@ -477,8 +478,6 @@ Notas sobre lo que **no** quedó comprobado:
 - Los scripts de `sql/oracle_apex/` no se ejecutaron (no hay un Oracle disponible).
 - Los scripts se repitieron sobre la base ya creada (son idempotentes); no se probó la creación
   desde una base inexistente en esa ejecución.
-- Con una contraseña incorrecta (error 1045 *con* contraseña) Python muestra la traza de
-  `pymysql`; el mensaje amigable solo se da cuando la contraseña está vacía.
 
 ## Ejecución paso a paso en XAMPP MariaDB
 
@@ -1083,7 +1082,7 @@ Todos los scripts usan PyMySQL a través de `conexion.py`, con consultas paramet
 | `_cargar_env(ruta)` | Si el `.env` existe, lo lee línea por línea; ignora vacías, comentarios y líneas sin `=`; quita el prefijo `export `; separa en el primer `=`; y usa `os.environ.setdefault` para no pisar variables ya definidas en el sistema (quita comillas del valor). |
 | `_cargar_env(Path(__file__)...parent.parent / ".env")` | La ejecuta al importar el módulo, apuntando al `.env` de la raíz. |
 | `CONFIG` | Diccionario de parámetros: `host` (`localhost`), `port` (entero, `3306`), `user` (`root`), `password` (vacía por defecto), `database` (`glob_gusters`), `charset` `utf8mb4` y `cursorclass` `DictCursor`. |
-| `conectar(**cambios)` | Mezcla `CONFIG` con los cambios; normaliza la contraseña `None` a `""`; abre la conexión con `autocommit=False`. Ante `OperationalError` 1045 sin contraseña sale con un mensaje que apunta al `.env`; ante 1049 (base inexistente) sale pidiendo ejecutar los SQL de creación; cualquier otro error se relanza. |
+| `conectar(**cambios)` | Mezcla `CONFIG` con los cambios; normaliza la contraseña `None` a `""`; abre la conexión con `autocommit=False`. Ante `OperationalError` 1045 (acceso denegado) sale sin traza con un mensaje que indica usuario, host y puerto: «sin contraseña» (apunta a `GLOB_GUSTERS_PASSWORD` del `.env`) si no se envió clave, o «el usuario o la contraseña son incorrectos» (apunta a `GLOB_GUSTERS_USER` y `GLOB_GUSTERS_PASSWORD`) si se envió; nunca imprime la contraseña. Ante 1049 (base inexistente) sale pidiendo ejecutar los SQL de creación; cualquier otro error se relanza. |
 | `conexion(**cambios)` | Context manager: entrega la conexión con `yield` y la cierra en `finally`. |
 | `consultar(con, sql, params)` | Ejecuta un `SELECT`/`SHOW` y devuelve todas las filas como lista de diccionarios. |
 | `ejecutar(con, sql, params)` | Ejecuta una escritura sin hacer commit y devuelve las filas afectadas. |
@@ -1124,7 +1123,7 @@ ejecución: ver «Conexión y consultas desde Java».
 | `HOST`, `PORT`, `USER`, `PASSWORD`, `DB` | Constantes de configuración obtenidas con `env(...)` (el puerto se convierte con `Integer.parseInt`). |
 | `env(nombre, defecto)` | Devuelve primero la variable del sistema, luego la del `.env` y por último el valor por defecto. |
 | `cargarEnv()` | Busca `.env` en el directorio actual y, si no está, en el padre; lee cada línea, ignora vacías/comentarios/sin `=`, quita `export ` de la clave y las comillas del valor, y usa solo el primer archivo encontrado. Si no puede leerlo, avisa por `stderr`. |
-| `conectar()` / `conectar(usuario, clave)` | Arma la URL `jdbc:mariadb://host:puerto/base?characterEncoding=utf8`, abre la conexión y apaga el autocommit. Traduce el error 1045 sin contraseña a un mensaje que apunta al `.env`, el 1049 a `IllegalStateException` pidiendo crear la base, y relanza los demás. |
+| `conectar()` / `conectar(usuario, clave)` | Arma la URL `jdbc:mariadb://host:puerto/base?characterEncoding=utf8`, abre la conexión y apaga el autocommit. Ante el error 1045 imprime en `stderr` el mismo mensaje que Python (sin contraseña / usuario o contraseña incorrectos, con usuario, host y puerto, sin mostrar la clave) y sale con código 1; el 1049 lo traduce a `IllegalStateException` pidiendo crear la base, y relanza los demás. (La línea `[ WARN]` que aparece antes es del propio driver JDBC.) |
 | `consultar(con, sql, params...)` | Prepara y ejecuta un `SELECT`/`SHOW` y devuelve una lista de mapas columna→valor en orden; las columnas `YEAR` se leen como `Integer` para mostrar solo el año. |
 | `ejecutar(con, sql, params...)` | Ejecuta una escritura con `executeUpdate()` y devuelve las filas afectadas (sin commit). |
 | `preparar(...)` | Crea el `PreparedStatement` y asigna los parámetros por posición (desde 1). |
