@@ -32,6 +32,8 @@ from pathlib import Path
 
 # Conector MySQL/MariaDB escrito en Python puro (dependencia de requirements.txt).
 import pymysql
+# Banderas del protocolo de conexión (se usa FOUND_ROWS, ver conectar()).
+from pymysql.constants import CLIENT
 # Cursor que devuelve cada fila como diccionario {columna: valor} en vez de tupla.
 from pymysql.cursors import DictCursor
 
@@ -89,7 +91,10 @@ def conectar(**cambios):
     datos["password"] = datos.get("password") or ""  # None también significa "sin contraseña"
     try:
         # Abre la conexión con autocommit apagado: las escrituras quedan en una transacción.
-        return pymysql.connect(**datos, autocommit=False)
+        # FOUND_ROWS hace que un UPDATE informe las filas que coinciden con el WHERE (aunque
+        # no cambien), igual que el cliente de MariaDB y el driver JDBC de java/; sin ella
+        # PyMySQL cuenta solo las filas realmente modificadas y Python y Java discreparían.
+        return pymysql.connect(**datos, autocommit=False, client_flag=CLIENT.FOUND_ROWS)
     except pymysql.err.OperationalError as error:
         # Error 1045 = acceso denegado. Se explica el motivo probable sin mostrar la traza
         # técnica y sin imprimir nunca la contraseña.
