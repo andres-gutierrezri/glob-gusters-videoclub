@@ -193,6 +193,263 @@ glob-gusters-videoclub/
 - Oracle Database 12c o superior, o un workspace de Oracle APEX (opcional, para `sql/oracle_apex/`).
 - Git y una cuenta de GitHub (opcional, para control de versiones).
 
+El detalle de versiones y cómo instalarlo en Windows, macOS y Linux está en
+[Dependencias requeridas](#dependencias-requeridas); los comandos para ejecutar SQL, Python
+y Java en cada sistema, en [Guía de ejecución por sistema operativo](#guía-de-ejecución-por-sistema-operativo).
+
+## Dependencias requeridas
+
+Resumen de todo lo que hay que tener instalado, por componente. Cada parte del proyecto es
+independiente: para usar solo SQL basta MariaDB y su cliente; Python y Java son opcionales.
+
+| Componente | Versión | Para qué se usa | Obligatorio para |
+|---|---|---|---|
+| **MariaDB** (servidor) | **10.2.1 o superior** (verificado con 10.4.28, la de XAMPP) | Aloja la base `glob_gusters`. Los scripts usan `CHECK`, `IF NOT EXISTS` en `ADD COLUMN`/`CREATE INDEX`/`CREATE TRIGGER` y `CREATE OR REPLACE VIEW`. | Todo |
+| Cliente `mariadb` (o `mysql`) | El que trae el servidor | Ejecuta los archivos `.sql` desde la terminal. | SQL, pruebas y diagnóstico |
+| **Python** | **3.9 o superior** (probado con 3.13) | Scripts de `py/`. | Python |
+| `PyMySQL` | `>=1.1` (`requirements.txt`) | Conector que usan todos los scripts de `py/` a través de `conexion.py`. | Python |
+| `mariadb` (paquete de pip) | `>=1.1` (`requirements.txt`) | Conector oficial; solo lo usa `py/conexion_mariabd.py`. | Solo ese ejemplo |
+| MariaDB Connector/C | **3.3.1 o superior** (librería del sistema, no es un paquete de pip) | Lo necesita el paquete `mariadb` para instalarse. El de XAMPP (3.1.x) es demasiado antiguo. | Solo `mariadb` |
+| **JDK** | **17 o superior** (probado con 26) | Compila y ejecuta `java/` (usa *text blocks* y `record`). | Java |
+| MariaDB Connector/J | **3.5.3** (`java/lib/mariadb-java-client-3.5.3.jar`, no se versiona) | Driver JDBC. | Java |
+| Git Bash (solo Windows) | Cualquiera reciente | Ejecutar `sql/mariadb/check-mariadb.sh`. | Solo ese lanzador |
+| Oracle Database / APEX | 12c o superior | Scripts de `sql/oracle_apex/`. | Solo la versión Oracle |
+
+> **MariaDB, no MySQL de Oracle.** Los scripts usan sintaxis propia de MariaDB (por ejemplo
+> `ADD COLUMN IF NOT EXISTS` y `CREATE INDEX IF NOT EXISTS`) que MySQL de Oracle no
+> admite. Si en tu equipo conviven ambos servidores, comprueba que apuntas al de MariaDB
+> (puerto 3306 en XAMPP). Los programas de Python, Java y el lanzador del diagnóstico
+> conectan por TCP a `127.0.0.1` justamente para no caer en el socket de otro servidor.
+
+### Instalación de las dependencias, por sistema operativo
+
+Los comandos de **macOS** están comprobados en este proyecto. Los de **Windows** y
+**Linux** usan las herramientas estándar de cada sistema pero no se ejecutaron en esta
+máquina.
+
+| Dependencia | Windows (PowerShell) | macOS | Linux (Debian/Ubuntu; en Fedora usa `dnf`) |
+|---|---|---|---|
+| MariaDB + cliente | Instala [XAMPP](https://www.apachefriends.org/) y arranca **MySQL**. Cliente: `C:\xampp\mysql\bin\mariadb.exe` | XAMPP, o `brew install mariadb`. Cliente: `/Applications/XAMPP/xamppfiles/bin/mariadb` | XAMPP (`/opt/lampp/bin/mariadb`), o `sudo apt install mariadb-server mariadb-client` |
+| Python 3.9+ | `winget install Python.Python.3.13` | `brew install python` | `sudo apt install python3 python3-venv python3-pip` |
+| Connector/C (solo para `mariadb`) | Instálalo desde [mariadb.com/downloads/connectors](https://mariadb.com/downloads/connectors/) si `pip` intenta compilar el paquete | `brew install mariadb-connector-c` | `sudo apt install libmariadb-dev build-essential python3-dev` (Fedora: `sudo dnf install mariadb-connector-c-devel gcc python3-devel`) |
+| JDK 17+ | `winget install EclipseAdoptium.Temurin.17.JDK` | `brew install openjdk@17` | `sudo apt install openjdk-17-jdk` |
+| Driver JDBC | Ver «Java» en la guía de ejecución | Ver «Java» en la guía de ejecución | Ver «Java» en la guía de ejecución |
+
+Para comprobar las versiones instaladas:
+
+```bash
+mariadb --version      # o: mysql --version
+python3 --version      # Windows: python --version
+javac -version
+```
+
+## Guía de ejecución por sistema operativo
+
+Esta guía reúne, para **Windows (PowerShell)**, **macOS** y **Linux**, cómo ejecutar los
+archivos SQL, el diagnóstico, las pruebas, Python y Java. Todas las rutas son relativas a
+la **raíz del proyecto** (la carpeta que contiene `README.md`).
+
+Convenciones usadas en los comandos:
+
+| Sistema | Cliente MariaDB (`$MARIADB`) | Si `root` tiene contraseña |
+|---|---|---|
+| Windows | `C:\xampp\mysql\bin\mariadb.exe` | Agrega `-p` al comando (la pide), o define antes `$env:MYSQL_PWD = "tu_clave"` |
+| macOS | `/Applications/XAMPP/xamppfiles/bin/mariadb` | Agrega `-p`, o `export MYSQL_PWD='tu_clave'` |
+| Linux | `/opt/lampp/bin/mariadb` (o `mariadb` si lo instalaste con el sistema) | Agrega `-p`, o `export MYSQL_PWD='tu_clave'` |
+
+Antes de empezar, asegúrate de que el servidor MariaDB está en marcha: en Windows y macOS,
+módulo **MySQL** del Panel de XAMPP en verde; en Linux, `sudo /opt/lampp/lampp start`
+(o `sudo systemctl start mariadb` si es una instalación del sistema).
+
+### 1. Archivos SQL (MariaDB)
+
+Se ejecutan **en este orden** (cada uno depende del anterior):
+`glob_gusters.sql` → `glob_gusters_insert.sql` → `commands/01_DDL.sql` → `02_DML.sql` →
+`03_DQL.sql` → `04_VDL.sql` → `05_DCL.sql` → `06_TCL.sql`. Son repetibles.
+
+**Windows (PowerShell).** Se usa la orden `source` del propio cliente, que lee el archivo
+directamente: evita los problemas de codificación (tildes, `ñ`) de canalizar texto por
+PowerShell.
+
+```powershell
+$MARIADB = "C:\xampp\mysql\bin\mariadb.exe"
+$Scripts = @(
+    "sql/mariadb/glob_gusters.sql",
+    "sql/mariadb/glob_gusters_insert.sql",
+    "sql/mariadb/commands/01_DDL.sql",
+    "sql/mariadb/commands/02_DML.sql",
+    "sql/mariadb/commands/03_DQL.sql",
+    "sql/mariadb/commands/04_VDL.sql",
+    "sql/mariadb/commands/05_DCL.sql",
+    "sql/mariadb/commands/06_TCL.sql"
+)
+foreach ($s in $Scripts) {
+    Write-Host ">>> $s"
+    & $MARIADB -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 -e "source $s"
+}
+```
+
+**macOS:**
+
+```bash
+MARIADB=/Applications/XAMPP/xamppfiles/bin/mariadb
+for f in sql/mariadb/glob_gusters.sql sql/mariadb/glob_gusters_insert.sql \
+         sql/mariadb/commands/01_DDL.sql sql/mariadb/commands/02_DML.sql \
+         sql/mariadb/commands/03_DQL.sql sql/mariadb/commands/04_VDL.sql \
+         sql/mariadb/commands/05_DCL.sql sql/mariadb/commands/06_TCL.sql; do
+    echo ">>> $f"
+    "$MARIADB" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 < "$f" || break
+done
+```
+
+**Linux:** igual que macOS, cambiando la primera línea por
+`MARIADB=/opt/lampp/bin/mariadb` (o `MARIADB=mariadb` si usas el MariaDB del sistema).
+
+Si hubiera un error, el bucle de macOS/Linux se detiene en el primer archivo que falle
+(`|| break`); el de PowerShell continúa, así que revisa los mensajes.
+
+### 2. Diagnóstico del servidor (`check-mariadb`)
+
+Es de solo lectura y se ejecuta con `--force`. Dos formas:
+
+| Sistema | Con la configuración del `.env` | Directamente (usa la base `glob_gusters`) |
+|---|---|---|
+| macOS / Linux | `sh sql/mariadb/check-mariadb.sh` | `"$MARIADB" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force < sql/mariadb/check-mariadb.sql` |
+| Windows | En **Git Bash**: `bash sql/mariadb/check-mariadb.sh` (si el cliente no está en el `PATH`, antes: `export MARIADB_BIN=/c/xampp/mysql/bin/mariadb.exe`) | `& $MARIADB -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force -e "source sql/mariadb/check-mariadb.sql"` |
+
+Para usar otra base desde la forma directa, agrega
+`--init-command="SET @glob_gusters_db = 'mi_base'"`. En Windows el lanzador `.sh` necesita
+Git Bash; la forma directa funciona en PowerShell sin nada más.
+
+Es normal que aparezcan los errores 1577 (`event_scheduler` apagado) y 1558 (`mysql.proc`
+desactualizada): son límites del entorno, descritos en el encabezado del script.
+
+### 3. Pruebas de integridad (`tests/`)
+
+Se ejecutan **después** de los ocho scripts, siempre con `--force`, sobre la base
+`glob_gusters`. Es normal ver 3 líneas `ERROR` (son las inserciones que los triggers y el
+`CHECK` deben rechazar); lo importante es la tabla final: **23 aprobadas, `PROYECTO OK`**.
+
+```powershell
+# Windows (PowerShell)
+& $MARIADB -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters -e "source tests/mariadb/glob_gusters_test.sql"
+```
+
+```bash
+# macOS y Linux
+"$MARIADB" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters < tests/mariadb/glob_gusters_test.sql
+```
+
+### 4. Python
+
+Requisitos: Python 3.9+, el servidor en marcha y la base ya creada (paso 1). Se trabaja
+dentro de un entorno virtual (`.venv/`, no se versiona) con las dependencias de
+`requirements.txt`.
+
+**Windows (PowerShell):**
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1          # si PowerShell lo bloquea: Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+pip install -r requirements.txt
+Copy-Item .env.example .env         # una sola vez; edita GLOB_GUSTERS_PASSWORD si tu root tiene clave
+python py\conexion.py
+```
+
+En `cmd.exe` la activación es `.venv\Scripts\activate.bat`.
+
+**macOS y Linux:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env                # una sola vez; edita GLOB_GUSTERS_PASSWORD si tu root tiene clave
+python py/conexion.py
+```
+
+> `requirements.txt` incluye `mariadb`, que necesita MariaDB Connector/C ≥ 3.3.1 instalado
+> en el sistema (ver la tabla de instalación). Si solo quieres usar PyMySQL, comenta esa
+> línea antes de instalar: todo `py/` funciona igual salvo `conexion_mariabd.py`. En macOS,
+> si `pip` no encuentra el Connector/C instalado con Homebrew, ejecuta antes
+> `export MARIADB_CONFIG=/opt/homebrew/opt/mariadb-connector-c/bin/mariadb_config`.
+
+Con el entorno activo, ejecuta los scripts en el mismo orden que los SQL (en Windows usa
+`\` en las rutas):
+
+```bash
+python py/ddl.py                  # 01_DDL
+python py/dml.py                  # 02_DML
+python py/dql.py                  # 03_DQL  (o: python py/dql.py disponibles)
+python py/vdl.py                  # 04_VDL  (python py/vdl.py --drop elimina las vistas)
+python py/dcl.py                  # 05_DCL  (requiere una cuenta administrativa)
+python py/tcl.py                  # 06_TCL
+python py/conexion_mariabd.py     # ejemplo con el conector oficial `mariadb`
+```
+
+Sin activar el entorno se puede llamar a su intérprete directamente:
+`.venv/bin/python py/ddl.py` (macOS/Linux) o `.venv\Scripts\python.exe py\ddl.py` (Windows).
+Para salir del entorno: `deactivate`.
+
+### 5. Java
+
+Requisitos: JDK 17+, el servidor en marcha y la base ya creada (paso 1). El driver JDBC se
+descarga una sola vez a `java/lib/` (no se versiona). Los comandos se ejecutan desde la
+carpeta `java/`; el programa encuentra el `.env` en la raíz del proyecto.
+
+**Windows (PowerShell):**
+
+```powershell
+cd java
+New-Item -ItemType Directory -Force lib | Out-Null
+Invoke-WebRequest -Uri https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/3.5.3/mariadb-java-client-3.5.3.jar -OutFile lib\mariadb-java-client-3.5.3.jar
+javac -encoding UTF-8 -d out (Get-ChildItem *.java).Name
+java -cp "out;lib/*" Conexion
+```
+
+**macOS y Linux:**
+
+```bash
+cd java
+mkdir -p lib
+curl -L -o lib/mariadb-java-client-3.5.3.jar \
+  https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/3.5.3/mariadb-java-client-3.5.3.jar
+javac -encoding UTF-8 -d out *.java
+java -cp "out:lib/*" Conexion
+```
+
+La única diferencia entre sistemas al ejecutar es el **separador del classpath**: `;` en
+Windows (`"out;lib/*"`) y `:` en macOS/Linux (`"out:lib/*"`). Luego, en el mismo orden que los
+SQL (aquí con la forma de macOS/Linux; en Windows cambia `:` por `;`):
+
+```bash
+java -cp "out:lib/*" Ddl          # 01_DDL
+java -cp "out:lib/*" Dml          # 02_DML
+java -cp "out:lib/*" Dql          # 03_DQL  (o: ... Dql disponibles)
+java -cp "out:lib/*" Vdl          # 04_VDL  (... Vdl --drop elimina las vistas)
+java -cp "out:lib/*" Dcl          # 05_DCL  (requiere una cuenta administrativa)
+java -cp "out:lib/*" Tcl          # 06_TCL
+```
+
+### 6. Oracle APEX (opcional)
+
+No requiere instalar nada en el equipo: en *SQL Workshop → SQL Scripts* de tu workspace,
+sube y ejecuta los archivos de `sql/oracle_apex/` en el orden indicado en la sección
+«Versión para Oracle APEX». Con SQL*Plus o SQLcl (en cualquier sistema operativo) el
+equivalente es `@sql/oracle_apex/00_glob_gusters_oracle_apex.sql`, etc.
+
+### Errores frecuentes
+
+| Mensaje | Causa y solución |
+|---|---|
+| `Access denied for user 'root'@'localhost'` | Tu `root` tiene contraseña o estás conectando a otro servidor. Define `GLOB_GUSTERS_PASSWORD` en `.env` (Python/Java) o agrega `-p` (SQL). Si tienes además MySQL de Oracle instalado, usa `-h 127.0.0.1 -P 3306` para no caer en su socket. |
+| `Unknown database 'glob_gusters'` / error 1049 | Aún no ejecutaste `glob_gusters.sql` (paso 1). |
+| `requires MariaDB Connector/C >= 3.3.1` al hacer `pip install` | Falta el Connector/C del sistema (ver tabla de instalación) o comenta `mariadb` en `requirements.txt`. |
+| `ModuleNotFoundError: No module named 'pymysql'` | No activaste el entorno virtual o no ejecutaste `pip install -r requirements.txt`. |
+| `ClassNotFoundException` / `No suitable driver` en Java | Falta el JAR en `java/lib/`, o el separador del classpath es incorrecto para tu sistema (`;` Windows, `:` macOS/Linux). |
+| `class file has wrong version` / `invalid source release` | El JDK es anterior a 17. |
+| Tildes o `ñ` mal mostradas en Windows | Ejecuta los SQL con `-e "source ..."` (no canalices con `Get-Content`) y `--default-character-set=utf8mb4`. |
+
 ## Ejecución paso a paso en XAMPP MariaDB
 
 Todos los ejemplos usan la misma conexión en los tres sistemas operativos
