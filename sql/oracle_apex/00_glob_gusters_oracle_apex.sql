@@ -1,6 +1,12 @@
 -- =====================================================================================
 -- Base de Datos Relacional Glob-Gusters Video-Club
 -- Autor: Andrés Felipe Gutiérrez Rivera
+--
+-- REQUISITOS:
+--   * Oracle Database 12c o superior (columnas IDENTITY), o un workspace de Oracle APEX
+--     (SQL Workshop > SQL Scripts). No requiere instalar nada más en el equipo; con
+--     SQL*Plus o SQLcl se ejecuta con `@ruta/archivo.sql` en cualquier sistema operativo.
+--     Orden de ejecución y detalles: README.md, sección «Versión para Oracle APEX».
 -- Motor: Oracle Database (Oracle APEX - SQL Workshop > SQL Scripts)
 --
 -- Conversión del script original de MariaDB a Oracle. Modelo normalizado hasta 3FN.

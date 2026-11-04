@@ -2,6 +2,12 @@
 -- 06_TCL.sql - Transaction Control Language (Oracle APEX)
 -- Autor: Andrés Felipe Gutiérrez Rivera
 --
+-- REQUISITOS:
+--   * Oracle Database 12c o superior (columnas IDENTITY), o un workspace de Oracle APEX
+--     (SQL Workshop > SQL Scripts). No requiere instalar nada más en el equipo; con
+--     SQL*Plus o SQLcl se ejecuta con `@ruta/archivo.sql` en cualquier sistema operativo.
+--     Orden de ejecución y detalles: README.md, sección «Versión para Oracle APEX».
+--
 -- Objetivo: agrupar operaciones relacionadas en transacciones que aseguren la
 -- integridad de los datos (COMMIT / ROLLBACK / SAVEPOINT). Ejemplo: registrar una
 -- renta junto con el ejemplar que se lleva el cliente.

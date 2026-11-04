@@ -2,6 +2,12 @@
 -- 02_DML.sql - Data Manipulation Language (Oracle APEX)
 -- Autor: Andrés Felipe Gutiérrez Rivera
 --
+-- REQUISITOS:
+--   * Oracle Database 12c o superior (columnas IDENTITY), o un workspace de Oracle APEX
+--     (SQL Workshop > SQL Scripts). No requiere instalar nada más en el equipo; con
+--     SQL*Plus o SQLcl se ejecuta con `@ruta/archivo.sql` en cualquier sistema operativo.
+--     Orden de ejecución y detalles: README.md, sección «Versión para Oracle APEX».
+--
 -- Objetivo: manipular los datos ya cargados en la base de datos Glob-Gusters.
 -- Incluye: INSERT (nuevo socio), UPDATE (estado de un ejemplar y duración de una
 -- película) y DELETE (registro de reparto).

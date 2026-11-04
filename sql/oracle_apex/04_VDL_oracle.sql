@@ -2,6 +2,12 @@
 -- 04_VDL.sql - View Definition Language (Oracle APEX)
 -- Autor: Andrés Felipe Gutiérrez Rivera
 --
+-- REQUISITOS:
+--   * Oracle Database 12c o superior (columnas IDENTITY), o un workspace de Oracle APEX
+--     (SQL Workshop > SQL Scripts). No requiere instalar nada más en el equipo; con
+--     SQL*Plus o SQLcl se ejecuta con `@ruta/archivo.sql` en cualquier sistema operativo.
+--     Orden de ejecución y detalles: README.md, sección «Versión para Oracle APEX».
+--
 -- Objetivo: definir y administrar vistas sobre la estructura y datos ya cargados.
 -- Incluye: CREATE OR REPLACE VIEW, consulta de las vistas y DROP VIEW de ejemplo.
 --
