@@ -5,11 +5,15 @@ Sin argumentos ejecuta todas; con un nombre ejecuta una sola:
     python py/dql.py disponibles
 """
 
+# `sys` da acceso a los argumentos de la línea de comandos (sys.argv) y a sys.exit.
 import sys
 
+# Funciones comunes de conexion.py (aquí no se necesita `ejecutar`: solo se lee).
 from conexion import conexion, consultar, imprimir
 
+# Catálogo de consultas: nombre corto -> (título para mostrar, sentencia SQL).
 CONSULTAS = {
+    # SELECT con condición: ejemplares sin una devolución pendiente (Entrega NULL).
     "disponibles": (
         "Ejemplares disponibles para alquilar",
         """SELECT e.`Ejemplar_ID`, e.`Numero`, p.`Titulo`
@@ -19,6 +23,7 @@ CONSULTAS = {
                SELECT er.`Ejemplar_ID` FROM `ejemplar_renta` er WHERE er.`Entrega` IS NULL
            )""",
     ),
+    # JOIN de cinco tablas: rentas que aún no tienen fecha de devolución.
     "rentas_activas": (
         "Rentas activas (sin fecha de devolución)",
         """SELECT c.`Nombre` AS Cliente, r.`Renta_ID`, r.`Inicia`,
@@ -31,6 +36,7 @@ CONSULTAS = {
            WHERE r.`Termina` IS NULL
            ORDER BY r.`Inicia`""",
     ),
+    # GROUP BY: cuántas películas hay por país, de mayor a menor.
     "peliculas_por_nacionalidad": (
         "Películas por nacionalidad",
         """SELECT n.`Nombre` AS Nacionalidad, COUNT(*) AS Total_Peliculas
@@ -39,6 +45,7 @@ CONSULTAS = {
            GROUP BY n.`Nombre`
            ORDER BY Total_Peliculas DESC""",
     ),
+    # GROUP BY: cuántos ejemplares hay en cada estado de conservación.
     "ejemplares_por_estado": (
         "Ejemplares por estado de conservación",
         """SELECT es.`Nombre` AS Estado, COUNT(*) AS Total_Ejemplares
@@ -50,15 +57,21 @@ CONSULTAS = {
 
 
 def main(argv):
+    # Sin argumentos se ejecutan todas las consultas; con argumentos, solo las nombradas.
     nombres = argv or list(CONSULTAS)
+    # Detecta nombres que no existan en el catálogo para fallar antes de conectar.
     desconocidas = [n for n in nombres if n not in CONSULTAS]
     if desconocidas:
+        # sys.exit con un texto lo imprime en stderr y termina con código 1.
         sys.exit(f"Consulta desconocida: {', '.join(desconocidas)}. Opciones: {', '.join(CONSULTAS)}")
+    # Una sola conexión para todas las consultas.
     with conexion() as con:
         for nombre in nombres:
+            # Desempaqueta la pareja (título, SQL) y muestra el resultado como tabla.
             titulo, sql = CONSULTAS[nombre]
             imprimir(titulo, consultar(con, sql))
 
 
+# Al lanzar el archivo, pasa a main() los argumentos (sin el nombre del script).
 if __name__ == "__main__":
     main(sys.argv[1:])

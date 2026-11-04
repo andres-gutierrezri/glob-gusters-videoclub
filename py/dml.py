@@ -6,10 +6,12 @@ Requiere glob_gusters_insert.sql y ddl.py (columnas Email y Duracion_Minutos).
 Las sentencias llevan parámetros (%s), nunca valores concatenados en el SQL.
 """
 
+# Funciones comunes de conexion.py.
 from conexion import conexion, consultar, ejecutar, imprimir
 
 
 def main():
+    # Abre la conexión y la cierra automáticamente al salir.
     with conexion() as con:
         # INSERT: socio nuevo avalado por Laura Gómez (se busca por DNI). IGNORE evita el
         # duplicado en reejecuciones (Dni es UNIQUE). El aval va en tabla derivada porque
@@ -22,12 +24,16 @@ def main():
                        (SELECT `Cliente_ID` FROM
                            (SELECT `Cliente_ID` FROM `cliente` WHERE `Dni` = %s) AS `aval`),
                        %s)""",
+            # Valores en el orden de los %s: dni, nombre, dirección, teléfono,
+            # DNI del aval (para buscar su ID) y correo electrónico.
             ("1000000005", "Sofía Ramírez", "Calle 50 # 20-30", "3011122334",
              "1000000001", "sofia.ramirez@example.com"),
         )
+        # `n` es el número de filas insertadas (0 si el socio ya existía).
         print(f"INSERT cliente: {n} fila(s)")
 
         # UPDATE: Quo Vadis (1951), ejemplar 2, queda como 'Dañado'.
+        # El JOIN localiza el ejemplar por título, año y número; la subconsulta obtiene el ID del estado.
         n = ejecutar(
             con,
             """UPDATE `ejemplar` e
@@ -47,6 +53,7 @@ def main():
         print(f"UPDATE pelicula: {n} fila(s)")
 
         # DELETE: quita a Anne Hathaway del reparto de Interstellar.
+        # `DELETE r FROM ... JOIN ...` borra solo filas de `reparto` (alias r).
         n = ejecutar(
             con,
             """DELETE r FROM `reparto` r
@@ -57,11 +64,14 @@ def main():
         )
         print(f"DELETE reparto: {n} fila(s)")
 
+        # Confirma de forma definitiva las cuatro operaciones anteriores.
         con.commit()
 
+        # Muestra el socio recién insertado para comprobar el resultado.
         imprimir("Cliente nuevo", consultar(
             con, "SELECT `Cliente_ID`, `Nombre`, `Email` FROM `cliente` WHERE `Dni` = %s", ("1000000005",)))
 
 
+# Ejecuta main() solo al lanzar el archivo directamente.
 if __name__ == "__main__":
     main()

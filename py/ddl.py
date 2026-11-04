@@ -4,10 +4,13 @@ CREATE / ALTER / CREATE INDEX / DROP. Idempotente: todo usa IF [NOT] EXISTS.
 Requiere haber ejecutado antes sql/mariadb/glob_gusters.sql.
 """
 
+# Funciones comunes de conexion.py: context manager de conexión, SELECT, escritura e impresión.
 from conexion import conexion, consultar, ejecutar, imprimir
 
+# Lista ordenada de sentencias DDL; se ejecutan una tras otra.
 SENTENCIAS = [
     # CREATE: tabla de prueba para demostrar CREATE TABLE.
+    # IF NOT EXISTS evita el error si la tabla ya existe (re-ejecución segura).
     """CREATE TABLE IF NOT EXISTS `tabla_prueba` (
         `Tabla_Prueba_ID` INT UNSIGNED NOT NULL AUTO_INCREMENT,
         `Descripcion` VARCHAR(100) NOT NULL,
@@ -15,6 +18,7 @@ SENTENCIAS = [
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci
       COMMENT = 'Tabla temporal usada únicamente para demostrar sentencias DDL.'""",
     # ALTER: correo del socio.
+    # ADD COLUMN IF NOT EXISTS agrega la columna solo si todavía no existe.
     """ALTER TABLE `cliente`
         ADD COLUMN IF NOT EXISTS `Email` VARCHAR(120) NULL
         COMMENT 'Correo electrónico de contacto del socio (opcional).'""",
@@ -23,6 +27,7 @@ SENTENCIAS = [
         ADD COLUMN IF NOT EXISTS `Duracion_Minutos` SMALLINT UNSIGNED NULL
         COMMENT 'Duración de la película en minutos.'""",
     # ALTER: amplía el teléfono para indicativos internacionales.
+    # MODIFY COLUMN cambia el tipo de una columna existente (de VARCHAR(20) a VARCHAR(25)).
     """ALTER TABLE `cliente`
         MODIFY COLUMN `Telefono` VARCHAR(25) NOT NULL
         COMMENT 'Teléfono de contacto del socio, incluye indicativo internacional.'""",
@@ -34,16 +39,22 @@ SENTENCIAS = [
 
 
 def main():
+    # Abre la conexión y la cierra automáticamente al terminar el bloque.
     with conexion() as con:
+        # Ejecuta cada sentencia DDL en el orden de la lista.
         for sql in SENTENCIAS:
             ejecutar(con, sql)
+            # Muestra un resumen: espacios múltiples colapsados y máximo 90 caracteres.
             print("OK:", " ".join(sql.split())[:90])
+        # Confirma los cambios (en MariaDB el DDL ya confirma implícitamente).
         con.commit()
 
+        # Verifica el resultado consultando el diccionario del servidor (information_schema).
         imprimir(
             "Columnas agregadas",
             consultar(
                 con,
+                # DATABASE() = base actual; el filtro IN compara pares (tabla, columna).
                 """SELECT table_name AS tabla, column_name AS columna, column_type AS tipo
                    FROM information_schema.columns
                    WHERE table_schema = DATABASE()
@@ -54,5 +65,6 @@ def main():
         )
 
 
+# Ejecuta main() solo cuando el archivo se lanza directamente (python py/ddl.py).
 if __name__ == "__main__":
     main()
