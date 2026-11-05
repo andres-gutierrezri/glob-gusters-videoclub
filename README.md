@@ -37,6 +37,12 @@ Motor de base de datos: **MariaDB** sobre entorno **XAMPP**.
   - [7. Oracle APEX (opcional)](#7-oracle-apex-opcional)
   - [Probar la creación desde cero sin tocar tu base](#probar-la-creación-desde-cero-sin-tocar-tu-base)
   - [Errores frecuentes](#errores-frecuentes)
+- [Scripts de shell (`shell/`)](#scripts-de-shell-shell)
+  - [Antes de empezar](#antes-de-empezar)
+  - [Linux y macOS (Bash)](#linux-y-macos-bash)
+  - [Windows (PowerShell)](#windows-powershell)
+  - [Windows (CMD)](#windows-cmd)
+  - [Qué hacen y qué no](#qué-hacen-y-qué-no)
 - [Última verificación de ejecución](#última-verificación-de-ejecución)
 - [Ejecución paso a paso en XAMPP MariaDB](#ejecución-paso-a-paso-en-xampp-mariadb)
   - [1. Iniciar los servicios](#1-iniciar-los-servicios)
@@ -237,6 +243,10 @@ glob-gusters-videoclub/
 │   ├── Conexion.java                    # Conexión a MariaDB (JDBC) y funciones comunes
 │   ├── Ddl.java / Dml.java / Dql.java   # Equivalentes en Java de 01_DDL, 02_DML y 03_DQL
 │   └── Vdl.java / Dcl.java / Tcl.java   # Equivalentes en Java de 04_VDL, 05_DCL y 06_TCL
+├── shell/                               # Lanzadores que ejecutan SQL, Python y Java con un comando
+│   ├── bash/                            # Linux y macOS: lib.sh, ejecutar-sql/python/java/todo.sh
+│   ├── powershell/                      # Windows PowerShell: lib.ps1, ejecutar-sql/python/java/todo.ps1
+│   └── cmd/                             # Windows CMD: lib.cmd, ejecutar-sql/python/java/todo.cmd
 ├── tests/
 │   └── mariadb/
 │       └── glob_gusters_test.sql        # Pruebas de integridad integral del proyecto
@@ -244,6 +254,7 @@ glob-gusters-videoclub/
 ├── requirements.txt                     # Dependencias de Python (PyMySQL)
 ├── .env.example                         # Plantilla de variables de entorno (se versiona)
 ├── .env                                 # Variables reales de conexión (local, ignorado por Git)
+├── .gitattributes                       # Fin de línea fijo: LF en .sh, CRLF en .cmd y .ps1
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -324,6 +335,9 @@ Esta guía reúne, para **Windows (PowerShell y CMD)**, **macOS** y **Linux**, c
 archivos SQL, el diagnóstico, las pruebas, Python y Java. Los pasos 1 a 5 usan PowerShell
 en Windows; el paso 6 es la guía completa para **CMD** (Símbolo del sistema). Todas las
 rutas son relativas a la **raíz del proyecto** (la carpeta que contiene `README.md`).
+
+> ¿Prefieres no copiar comandos? Los lanzadores de [`shell/`](#scripts-de-shell-shell) ejecutan
+> todo esto con un solo comando en Windows, macOS y Linux.
 
 Convenciones usadas en los comandos:
 
@@ -660,6 +674,127 @@ El socket debe tener una ruta corta (el límite es de 103 caracteres), por eso s
 | `ClassNotFoundException` / `No suitable driver` en Java | Falta el JAR en `java/lib/`, o el separador del classpath es incorrecto para tu sistema (`;` Windows, `:` macOS/Linux). |
 | `class file has wrong version` / `invalid source release` | El JDK es anterior a 17. |
 | Tildes o `ñ` mal mostradas en Windows | Ejecuta los SQL con `-e "source ..."` (no canalices con `Get-Content`) y `--default-character-set=utf8mb4`. |
+
+## Scripts de shell (`shell/`)
+
+La carpeta `shell/` reúne lanzadores listos para ejecutar **todo el proyecto con un solo
+comando**: los 8 scripts SQL de MariaDB (más las pruebas y el diagnóstico), los programas de
+Python y los de Java. Hay una versión por sistema operativo y cada una hace lo mismo:
+
+| Sistema | Carpeta | Extensión | Intérprete |
+|---|---|---|---|
+| Linux y macOS | `shell/bash/` | `.sh` | Bash |
+| Windows (PowerShell) | `shell/powershell/` | `.ps1` | Windows PowerShell 5.1 o PowerShell 7 |
+| Windows (CMD) | `shell/cmd/` | `.cmd` | `cmd.exe` |
+
+| Lanzador | Qué ejecuta |
+|---|---|
+| `ejecutar-sql` | Los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (23 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
+| `ejecutar-python` | Crea `.venv` si falta, instala `requirements.txt` y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
+| `ejecutar-java` | Descarga el driver JDBC a `java/lib/` si falta, compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
+| `ejecutar-todo` | Los tres anteriores, en ese orden, deteniéndose en el primer fallo. |
+| `lib` | Funciones comunes (no se ejecuta directamente): lee el `.env`, localiza el cliente `mariadb` y define el orden de los scripts SQL. |
+
+### Antes de empezar
+
+1. Arranca el servidor MariaDB (módulo **MySQL** de XAMPP en verde).
+2. Ten instalado lo que vayas a ejecutar: el cliente `mariadb` para SQL, Python 3.9+ para
+   Python y JDK 17+ para Java (ver [Dependencias requeridas](#dependencias-requeridas)).
+3. No hace falta crear el `.env` a mano: si no existe, `ejecutar-python` y `ejecutar-java` lo
+   copian desde `.env.example`. Si tu usuario `root` **tiene contraseña**, escríbela en
+   `GLOB_GUSTERS_PASSWORD` dentro del `.env` (o defínela como variable de entorno).
+4. Los lanzadores se pueden llamar **desde cualquier carpeta**: ubican solos la raíz del
+   proyecto.
+
+Todos leen la conexión con la misma prioridad que Python y Java: variable de entorno del
+sistema, luego `.env`, luego el valor por defecto (`127.0.0.1:3306`, usuario `root`, base
+`glob_gusters`).
+
+### Linux y macOS (Bash)
+
+```bash
+# Todo el proyecto
+bash shell/bash/ejecutar-todo.sh
+
+# Por partes
+bash shell/bash/ejecutar-sql.sh
+bash shell/bash/ejecutar-python.sh
+bash shell/bash/ejecutar-java.sh
+```
+
+Opciones: `ejecutar-sql.sh --sin-pruebas --sin-diagnostico` y
+`ejecutar-todo.sh --sin-python --sin-java`; `-h` muestra la ayuda de cada script. Los
+archivos ya se versionan como ejecutables (`chmod +x`), así que también sirve
+`./shell/bash/ejecutar-todo.sh`.
+
+Si el cliente `mariadb` no está en el `PATH` (es lo habitual con XAMPP), indica su ruta:
+
+```bash
+# macOS (XAMPP)
+MARIADB_BIN=/Applications/XAMPP/xamppfiles/bin/mariadb bash shell/bash/ejecutar-todo.sh
+# Linux (XAMPP)
+MARIADB_BIN=/opt/lampp/bin/mariadb bash shell/bash/ejecutar-todo.sh
+```
+
+### Windows (PowerShell)
+
+```powershell
+# Todo el proyecto
+powershell -ExecutionPolicy Bypass -File shell\powershell\ejecutar-todo.ps1
+
+# Por partes
+powershell -ExecutionPolicy Bypass -File shell\powershell\ejecutar-sql.ps1
+powershell -ExecutionPolicy Bypass -File shell\powershell\ejecutar-python.ps1
+powershell -ExecutionPolicy Bypass -File shell\powershell\ejecutar-java.ps1
+```
+
+- `-ExecutionPolicy Bypass` solo vale para esa ejecución y evita el bloqueo de scripts de
+  PowerShell. En PowerShell 7 se usa `pwsh` en lugar de `powershell`. Si prefieres no
+  escribirlo, abre la sesión con `Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned`
+  y llama a los scripts directamente: `.\shell\powershell\ejecutar-todo.ps1`.
+- Opciones: `-SinPruebas` y `-SinDiagnostico` (`ejecutar-sql.ps1`), `-SinPython` y `-SinJava`
+  (`ejecutar-todo.ps1`).
+- Si `mariadb.exe` no está en el `PATH` y XAMPP no está en `C:\xampp`:
+  `$env:MARIADB_BIN = "D:\xampp\mysql\bin\mariadb.exe"` antes de ejecutar.
+- Si Windows marca los scripts como descargados de Internet: `Unblock-File shell\powershell\*.ps1`.
+
+### Windows (CMD)
+
+```bat
+REM Todo el proyecto
+shell\cmd\ejecutar-todo.cmd
+
+REM Por partes
+shell\cmd\ejecutar-sql.cmd
+shell\cmd\ejecutar-python.cmd
+shell\cmd\ejecutar-java.cmd
+```
+
+- Opciones: `--sin-pruebas` y `--sin-diagnostico` (`ejecutar-sql.cmd`), `--sin-python` y
+  `--sin-java` (`ejecutar-todo.cmd`).
+- Si `mariadb.exe` no está en el `PATH` y XAMPP no está en `C:\xampp`:
+  `set MARIADB_BIN=D:\xampp\mysql\bin\mariadb.exe` antes de ejecutar.
+- Los mensajes de los `.cmd` no llevan tildes a propósito: `cmd.exe` las muestra mal según la
+  página de códigos. Los scripts activan UTF-8 (`chcp 65001`) solo para esa ventana.
+- Una contraseña con caracteres especiales de CMD (`%`, `^`, `&`) puede interpretarse mal desde
+  el `.env`; en ese caso usa los lanzadores de PowerShell.
+
+### Qué hacen y qué no
+
+- Los lanzadores solo **orquestan** los mismos comandos de la [Guía de ejecución](#guía-de-ejecución-por-sistema-operativo);
+  no cambian ningún script SQL, Python ni Java. Son repetibles.
+- El script `dcl` (SQL, Python y Java) crea cuentas de ejemplo y requiere un usuario con
+  privilegios administrativos (el `root` de XAMPP los tiene).
+- Si el paquete `mariadb` de pip no se puede instalar (falta MariaDB Connector/C), el lanzador de
+  Python instala solo PyMySQL, omite `conexion_mariabd.py` con un aviso y termina bien.
+- Los scripts de `sql/oracle_apex/` **no** se incluyen: requieren un Oracle Database o un workspace
+  de APEX (ver [Versión para Oracle APEX](#versión-para-oracle-apex)).
+- Código de salida: `0` si todo terminó bien, distinto de `0` en cuanto algo falla (útil para
+  automatizar). Es normal ver 3 líneas `ERROR` durante las pruebas de integridad y algunos
+  errores 1558 en el diagnóstico (ver [Guía de ejecución](#guía-de-ejecución-por-sistema-operativo)).
+- Verificación: los lanzadores de **Bash** se ejecutaron en macOS contra una instancia
+  nueva y vacía de MariaDB 10.4.28 (8 scripts sin errores, 23/23 pruebas, Python y Java
+  completos). Los de **PowerShell** y **CMD** no se pudieron ejecutar en esa máquina, por no ser Windows.
 
 ## Última verificación de ejecución
 
