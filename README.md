@@ -518,10 +518,46 @@ java -cp "out:lib/*" Conexion
 ```
 
 La única diferencia entre sistemas al ejecutar es el **separador del classpath**: `;` en
-Windows (`"out;lib/*"`) y `:` en macOS/Linux (`"out:lib/*"`). Luego, en el mismo orden que los
-SQL (aquí con la forma de macOS/Linux; en Windows cambia `:` por `;`):
+Windows (`"out;lib/*"`) y `:` en macOS/Linux (`"out:lib/*"`). Escribe siempre el classpath
+**entre comillas**: en PowerShell y en CMD el `;` separa comandos y el `*` se expandiría. Los
+programas se ejecutan en el mismo orden que los SQL, desde la carpeta `java/` y después de
+compilar (`javac ...` de arriba).
+
+**Windows (PowerShell):**
+
+```powershell
+cd java
+java -cp "out;lib/*" Conexion     # comprueba la conexión
+java -cp "out;lib/*" Ddl          # 01_DDL
+java -cp "out;lib/*" Dml          # 02_DML
+java -cp "out;lib/*" Dql          # 03_DQL  (o: ... Dql disponibles)
+java -cp "out;lib/*" Vdl          # 04_VDL  (... Vdl --drop elimina las vistas)
+java -cp "out;lib/*" Dcl          # 05_DCL  (requiere una cuenta administrativa)
+java -cp "out;lib/*" Tcl          # 06_TCL
+```
+
+**Windows (CMD):**
+
+```bat
+cd java
+java -cp "out;lib/*" Conexion
+java -cp "out;lib/*" Ddl
+java -cp "out;lib/*" Dml
+java -cp "out;lib/*" Dql
+java -cp "out;lib/*" Vdl
+java -cp "out;lib/*" Dcl
+java -cp "out;lib/*" Tcl
+```
+
+Para ejecutar solo uno, escribe únicamente su línea (por ejemplo,
+`java -cp "out;lib/*" Ddl`). Si cambias algún `.java`, vuelve a compilar antes. Si prefieres no
+escribirlos a mano, `shell\powershell\ejecutar-java.ps1` y `shell\cmd\ejecutar-java.cmd` descargan el
+driver, compilan y ejecutan todo en orden (ver «Scripts de shell»).
+
+**macOS y Linux:**
 
 ```bash
+java -cp "out:lib/*" Conexion
 java -cp "out:lib/*" Ddl          # 01_DDL
 java -cp "out:lib/*" Dml          # 02_DML
 java -cp "out:lib/*" Dql          # 03_DQL  (o: ... Dql disponibles)
