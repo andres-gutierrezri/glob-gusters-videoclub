@@ -2,6 +2,9 @@
 rem ====================================================================================
 rem ejecutar-sql.cmd - Ejecuta todos los scripts SQL de MariaDB (Windows CMD)
 rem ====================================================================================
+rem Primero comprueba las versiones: muestra la del cliente y la del servidor y avisa si el
+rem servidor es anterior a MariaDB 10.2.1 (no instala nada ni pide permisos de administrador).
+rem
 rem Orden: glob_gusters.sql, glob_gusters_insert.sql, commands\01_DDL ... 06_TCL, y despues
 rem las pruebas de integridad y el diagnostico del servidor. Los scripts son repetibles.
 rem Se detiene en el primer error de los 8 scripts; las pruebas y el diagnostico se
@@ -29,6 +32,34 @@ goto :args
 
 :inicio
 echo ^>^>^> Servidor: %DB_USER%@%DB_HOST%:%DB_PORT%  (cliente: %CLIENTE%)
+
+echo ^>^>^> Comprobando las versiones del cliente y del servidor
+rem Las versiones se leen a un archivo temporal para no depender de espacios en la ruta del cliente.
+set "TMP_VER=%TEMP%\glob_gusters_version.txt"
+"%CLIENTE%" --version > "%TMP_VER%" 2>nul
+set "VER_CLIENTE="
+set /p VER_CLIENTE=<"%TMP_VER%"
+echo ^>^>^> Cliente: %VER_CLIENTE%
+"%CLIENTE%" -h %DB_HOST% -P %DB_PORT% -u %DB_USER% -N -s -e "SELECT VERSION()" > "%TMP_VER%" 2>nul
+set "VER_SERVIDOR="
+if not errorlevel 1 set /p VER_SERVIDOR=<"%TMP_VER%"
+del "%TMP_VER%" >nul 2>&1
+if not defined VER_SERVIDOR (
+    echo [AVISO] No se pudo consultar la version del servidor ^(esta en marcha y son correctas las credenciales?^).
+    goto :scripts
+)
+rem Algunas versiones anteponen "5.5.5-" ^(compatibilidad de replicacion^); se quita para comparar.
+set "VER_NUM=%VER_SERVIDOR:5.5.5-=%"
+set "VER_MAYOR=0" & set "VER_MENOR=0" & set "VER_PARCHE=0"
+for /f "tokens=1-3 delims=.-" %%a in ("%VER_NUM%") do set "VER_MAYOR=%%a" & set "VER_MENOR=%%b" & set "VER_PARCHE=%%c"
+set /a VER_TOTAL=VER_MAYOR*1000000+VER_MENOR*1000+VER_PARCHE 2>nul
+if %VER_TOTAL% GEQ 10002001 (
+    echo [OK] Servidor %VER_SERVIDOR% ^(se requiere MariaDB 10.2.1 o superior^).
+) else (
+    echo [AVISO] Servidor %VER_SERVIDOR%: los scripts requieren MariaDB 10.2.1 o superior y pueden fallar.
+)
+
+:scripts
 
 for %%f in (sql\mariadb\glob_gusters.sql sql\mariadb\glob_gusters_insert.sql sql\mariadb\commands\01_DDL.sql sql\mariadb\commands\02_DML.sql sql\mariadb\commands\03_DQL.sql sql\mariadb\commands\04_VDL.sql sql\mariadb\commands\05_DCL.sql sql\mariadb\commands\06_TCL.sql) do (
     echo ^>^>^> %%f

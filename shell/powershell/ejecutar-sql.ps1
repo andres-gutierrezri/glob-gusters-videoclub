@@ -1,6 +1,9 @@
 ﻿# =====================================================================================
 # ejecutar-sql.ps1 — Ejecuta todos los scripts SQL de MariaDB (Windows PowerShell)
 # =====================================================================================
+# Primero comprueba las versiones: muestra la del cliente y la del servidor y avisa si el
+# servidor es anterior a MariaDB 10.2.1 (no instala nada ni pide permisos de administrador).
+#
 # Orden: glob_gusters.sql -> glob_gusters_insert.sql -> commands\01_DDL ... 06_TCL,
 # y después las pruebas de integridad y el diagnóstico del servidor. Los scripts son
 # repetibles. Se detiene en el primer error de los 8 scripts; las pruebas y el
@@ -25,6 +28,22 @@ Set-Location $script:Raiz
 Info "Servidor: $($script:Usuario)@$($script:DbHost):$($script:Puerto)  (cliente: $($script:Cliente))"
 
 $conexion = @('-h', $script:DbHost, '-P', $script:Puerto, '-u', $script:Usuario, '--default-character-set=utf8mb4')
+
+Info 'Comprobando las versiones del cliente y del servidor'
+Info "Cliente: $((& $script:Cliente --version 2>$null | Select-Object -First 1))"
+$versionServidor = (& $script:Cliente @conexion -N -s -e 'SELECT VERSION()' 2>$null | Select-Object -First 1)
+if ($LASTEXITCODE -ne 0 -or -not $versionServidor) {
+    Aviso 'No se pudo consultar la versión del servidor (¿está en marcha y son correctas las credenciales?).'
+} else {
+    # Algunas versiones anteponen "5.5.5-" (compatibilidad de replicación); se quita para comparar.
+    $numero = ($versionServidor -replace '^5\.5\.5-', '') -replace '^(\d+\.\d+\.\d+).*$', '$1'
+    $parsed = $null
+    if ([version]::TryParse($numero, [ref]$parsed) -and $parsed -ge [version]'10.2.1') {
+        Ok "Servidor $versionServidor (se requiere MariaDB 10.2.1 o superior)."
+    } else {
+        Aviso "Servidor ${versionServidor}: los scripts requieren MariaDB 10.2.1 o superior y pueden fallar."
+    }
+}
 
 foreach ($f in $script:SqlScripts) {
     Info $f

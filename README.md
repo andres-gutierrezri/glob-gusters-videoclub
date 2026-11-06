@@ -751,7 +751,7 @@ Python y los de Java. Hay una versión por sistema operativo y cada una hace lo 
 
 | Lanzador | Qué ejecuta |
 |---|---|
-| `ejecutar-sql` | Los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
+| `ejecutar-sql` | Primero muestra la versión del cliente y del servidor y avisa si el servidor es anterior a MariaDB 10.2.1 (no instala nada; sin conexión avisa y sigue). Luego los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
 | `ejecutar-python` | Crea `.venv` si falta, actualiza `pip` (si no hay Internet avisa y sigue), instala `requirements.txt` y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
 | `ejecutar-java` | Primero actualiza el driver JDBC: consulta en Maven Central la última versión **3.x** de MariaDB Connector/J y, si `java/lib/` no la tiene, la descarga y borra las anteriores (sin Internet usa el que haya; si no hay ninguno, baja la 3.5.3). Solo avanza dentro de la serie 3.x: la 4.x exige TLS y no conecta con el MariaDB de XAMPP sin configurarlo. Luego compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
 | `ejecutar-todo` | Los tres anteriores, en ese orden, deteniéndose en el primer fallo. |

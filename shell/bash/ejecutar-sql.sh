@@ -2,6 +2,9 @@
 # =====================================================================================
 # ejecutar-sql.sh — Ejecuta todos los scripts SQL de MariaDB (Linux y macOS)
 # =====================================================================================
+# Primero comprueba las versiones: muestra la del cliente y la del servidor y avisa si el
+# servidor es anterior a MariaDB 10.2.1 (no instala nada ni pide permisos de administrador).
+#
 # Orden: glob_gusters.sql -> glob_gusters_insert.sql -> commands/01_DDL ... 06_TCL,
 # y después las pruebas de integridad y el diagnóstico del servidor (ambos de solo
 # lectura sobre los datos). Los scripts son repetibles. Se detiene en el primer error
@@ -17,7 +20,7 @@
 set -u
 . "$(dirname "$0")/lib.sh"
 
-uso() { sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; }
+uso() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
 PRUEBAS=1; DIAGNOSTICO=1
 for arg in "$@"; do
     case "$arg" in
@@ -32,6 +35,22 @@ cargar_conexion
 localizar_cliente
 cd "$RAIZ" || exit 1
 info "Servidor: $USUARIO@$HOST:$PORT  (cliente: $CLIENTE)"
+
+info "Comprobando las versiones del cliente y del servidor"
+info "Cliente: $("$CLIENTE" --version 2>/dev/null | head -n 1)"
+VERSION_SERVIDOR=$("$CLIENTE" -h "$HOST" -P "$PORT" -u "$USUARIO" -N -s -e "SELECT VERSION()" 2>/dev/null | head -n 1)
+if [ -z "$VERSION_SERVIDOR" ]; then
+    aviso "No se pudo consultar la versión del servidor (¿está en marcha y son correctas las credenciales?)."
+else
+    # Algunas versiones anteponen "5.5.5-" (compatibilidad de replicación); se quita para comparar.
+    NUMERO=$(printf '%s' "${VERSION_SERVIDOR#5.5.5-}" | sed -E 's/^([0-9]+)\.([0-9]+)\.([0-9]+).*/\1 \2 \3/')
+    set -- $NUMERO
+    if [ "$#" -eq 3 ] && [ $(( $1 * 1000000 + $2 * 1000 + $3 )) -ge 10002001 ]; then
+        ok "Servidor $VERSION_SERVIDOR (se requiere MariaDB 10.2.1 o superior)."
+    else
+        aviso "Servidor $VERSION_SERVIDOR: los scripts requieren MariaDB 10.2.1 o superior y pueden fallar."
+    fi
+fi
 
 for f in "${SQL_SCRIPTS[@]}"; do
     info "$f"
