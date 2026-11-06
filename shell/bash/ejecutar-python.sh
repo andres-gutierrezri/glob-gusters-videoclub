@@ -2,7 +2,7 @@
 # =====================================================================================
 # ejecutar-python.sh — Ejecuta todos los scripts de py/ (Linux y macOS)
 # =====================================================================================
-# Crea el entorno virtual .venv si no existe, instala requirements.txt y ejecuta, en
+# Crea el entorno virtual .venv si no existe, actualiza pip, instala requirements.txt y ejecuta, en
 # orden: conexion, ddl, dml, dql, vdl, dcl, tcl y conexion_mariabd. Requiere que la base
 # ya exista (ejecutar-sql.sh) y Python 3.9+.
 #
@@ -34,6 +34,9 @@ if [ ! -x .venv/bin/python ]; then
     "$PYTHON" -m venv .venv || { falla "No se pudo crear .venv (en Debian/Ubuntu: sudo apt install python3-venv)."; exit 1; }
 fi
 VPY=.venv/bin/python
+
+info "Actualizando pip"
+"$VPY" -m pip install --quiet --upgrade pip \n    || aviso "No se pudo actualizar pip (¿sin conexión a Internet?). Se continúa con la versión actual."
 
 info "Instalando dependencias (requirements.txt)"
 MARIADB_PKG=1

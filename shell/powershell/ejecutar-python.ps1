@@ -1,7 +1,7 @@
 ﻿# =====================================================================================
 # ejecutar-python.ps1 — Ejecuta todos los scripts de py\ (Windows PowerShell)
 # =====================================================================================
-# Crea el entorno virtual .venv si no existe, instala requirements.txt y ejecuta, en
+# Crea el entorno virtual .venv si no existe, actualiza pip, instala requirements.txt y ejecuta, en
 # orden: conexion, ddl, dml, dql, vdl, dcl, tcl y conexion_mariabd. Requiere que la base
 # ya exista (ejecutar-sql.ps1) y Python 3.9+.
 #
@@ -30,6 +30,10 @@ if (-not (Test-Path $venvPy)) {
     & $python -m venv .venv
     if ($LASTEXITCODE -ne 0) { Falla 'No se pudo crear .venv.'; exit 1 }
 }
+
+Info 'Actualizando pip'
+& $venvPy -m pip install --quiet --upgrade pip
+if ($LASTEXITCODE -ne 0) { Aviso 'No se pudo actualizar pip (¿sin conexión a Internet?). Se continúa con la versión actual.' }
 
 Info 'Instalando dependencias (requirements.txt)'
 $conMariadb = $true

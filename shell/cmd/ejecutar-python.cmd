@@ -2,7 +2,7 @@
 rem ====================================================================================
 rem ejecutar-python.cmd - Ejecuta todos los scripts de py\ (Windows CMD)
 rem ====================================================================================
-rem Crea el entorno virtual .venv si no existe, instala requirements.txt y ejecuta, en
+rem Crea el entorno virtual .venv si no existe, actualiza pip, instala requirements.txt y ejecuta, en
 rem orden: conexion, ddl, dml, dql, vdl, dcl, tcl y conexion_mariabd. Requiere que la
 rem base ya exista (ejecutar-sql.cmd) y Python 3.9+.
 rem
@@ -39,6 +39,10 @@ if errorlevel 1 (
 )
 
 :dependencias
+echo ^>^>^> Actualizando pip
+"%VPY%" -m pip install --quiet --upgrade pip
+if errorlevel 1 echo [AVISO] No se pudo actualizar pip ^(sin conexion a Internet?^). Se continua con la version actual.
+
 echo ^>^>^> Instalando dependencias ^(requirements.txt^)
 set "CON_MARIADB=1"
 "%VPY%" -m pip install --quiet -r requirements.txt

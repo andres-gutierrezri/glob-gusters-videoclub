@@ -752,7 +752,7 @@ Python y los de Java. Hay una versión por sistema operativo y cada una hace lo 
 | Lanzador | Qué ejecuta |
 |---|---|
 | `ejecutar-sql` | Los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
-| `ejecutar-python` | Crea `.venv` si falta, instala `requirements.txt` y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
+| `ejecutar-python` | Crea `.venv` si falta, actualiza `pip` (si no hay Internet avisa y sigue), instala `requirements.txt` y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
 | `ejecutar-java` | Descarga el driver JDBC a `java/lib/` si falta, compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
 | `ejecutar-todo` | Los tres anteriores, en ese orden, deteniéndose en el primer fallo. |
 | `lib` | Funciones comunes (no se ejecuta directamente): lee el `.env`, localiza el cliente `mariadb` y define el orden de los scripts SQL. |
