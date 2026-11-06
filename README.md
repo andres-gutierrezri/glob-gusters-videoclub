@@ -300,7 +300,7 @@ independiente: para usar solo SQL basta MariaDB y su cliente; Python y Java son 
 | `mariadb` (paquete de pip) | `>=1.1` (`requirements.txt`) | Conector oficial; solo lo usa `py/conexion_mariabd.py`. | Solo ese ejemplo |
 | MariaDB Connector/C | **3.3.1 o superior** (librería del sistema, no es un paquete de pip) | Lo necesita el paquete `mariadb` para instalarse. El de XAMPP (3.1.x) es demasiado antiguo. | Solo `mariadb` |
 | **JDK** | **17 o superior** (probado con 26) | Compila y ejecuta `java/` (usa *text blocks* y `record`). | Java |
-| MariaDB Connector/J | **3.5.3** (`java/lib/mariadb-java-client-3.5.3.jar`, no se versiona) | Driver JDBC. | Java |
+| MariaDB Connector/J | **3.5.3** o superior de la serie 3.x (`java/lib/mariadb-java-client-<versión>.jar`, no se versiona; los lanzadores `ejecutar-java` lo actualizan solo; la 3.5.11 probada con las 25 pruebas y Java) | Driver JDBC. | Java |
 | Git Bash (solo Windows) | Cualquiera reciente | Ejecutar `sql/mariadb/check-mariadb.sh`. | Solo ese lanzador |
 | Oracle Database / APEX | 12c o superior | Scripts de `sql/oracle_apex/`. | Solo la versión Oracle |
 
@@ -753,7 +753,7 @@ Python y los de Java. Hay una versión por sistema operativo y cada una hace lo 
 |---|---|
 | `ejecutar-sql` | Los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
 | `ejecutar-python` | Crea `.venv` si falta, actualiza `pip` (si no hay Internet avisa y sigue), instala `requirements.txt` y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
-| `ejecutar-java` | Descarga el driver JDBC a `java/lib/` si falta, compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
+| `ejecutar-java` | Primero actualiza el driver JDBC: consulta en Maven Central la última versión **3.x** de MariaDB Connector/J y, si `java/lib/` no la tiene, la descarga y borra las anteriores (sin Internet usa el que haya; si no hay ninguno, baja la 3.5.3). Solo avanza dentro de la serie 3.x: la 4.x exige TLS y no conecta con el MariaDB de XAMPP sin configurarlo. Luego compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
 | `ejecutar-todo` | Los tres anteriores, en ese orden, deteniéndose en el primer fallo. |
 | `lib` | Funciones comunes (no se ejecuta directamente): lee el `.env`, localiza el cliente `mariadb` y define el orden de los scripts SQL. |
 

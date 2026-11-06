@@ -1,17 +1,22 @@
 ﻿# =====================================================================================
 # ejecutar-java.ps1 — Compila y ejecuta todas las clases de java\ (Windows PowerShell)
 # =====================================================================================
-# Descarga el driver JDBC (MariaDB Connector/J 3.5.3) a java\lib\ si falta, compila con
-# javac y ejecuta, en orden: Conexion, Ddl, Dml, Dql, Vdl, Dcl y Tcl. Requiere JDK 17+
-# y que la base ya exista (ejecutar-sql.ps1). El separador del classpath en Windows es `;`.
+# Primero actualiza el driver JDBC: consulta en Maven Central la última versión 3.x
+# estable de MariaDB Connector/J y, si java\lib\ no la tiene, la descarga y borra las
+# anteriores (sin Internet usa el driver que haya; si no hay ninguno, baja la 3.5.3).
+# Solo se actualiza dentro de la serie 3.x: la 4.x exige TLS y no conecta con el MariaDB
+# de XAMPP sin configurarlo. Después compila con javac y ejecuta, en orden: Conexion,
+# Ddl, Dml, Dql, Vdl, Dcl y Tcl. Requiere JDK 17+ y que la base ya exista
+# (ejecutar-sql.ps1). El separador del classpath en Windows es `;`.
 #
 # Uso (desde cualquier carpeta):
 #     powershell -ExecutionPolicy Bypass -File shell\powershell\ejecutar-java.ps1
 # =====================================================================================
 . (Join-Path $PSScriptRoot 'lib.ps1')
 
-$jar = 'mariadb-java-client-3.5.3.jar'
-$url = "https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/3.5.3/$jar"
+$maven = 'https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client'
+$linea = 3            # serie del driver que se mantiene actualizada
+$jarBase = '3.5.3'    # versión que se baja si no hay Internet y aún no hay driver
 
 if (-not ((Get-Command javac -ErrorAction SilentlyContinue) -and (Get-Command java -ErrorAction SilentlyContinue))) {
     Falla 'No se encontró el JDK (javac/java). Instálalo: winget install EclipseAdoptium.Temurin.17.JDK'
@@ -21,16 +26,45 @@ if (-not ((Get-Command javac -ErrorAction SilentlyContinue) -and (Get-Command ja
 Asegurar-Env
 Set-Location (Join-Path $script:Raiz 'java')
 
-if (-not (Test-Path "lib\$jar")) {
-    Info "Descargando $jar"
-    New-Item -ItemType Directory -Force lib | Out-Null
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-WebRequest -Uri $url -OutFile "lib\$jar" -UseBasicParsing
-    } catch {
-        Remove-Item "lib\$jar" -ErrorAction SilentlyContinue
-        Falla "No se pudo descargar el driver desde $url"
-        exit 1
+New-Item -ItemType Directory -Force lib | Out-Null
+Info "Actualizando el driver JDBC (última versión $linea.x de MariaDB Connector/J)"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$ultima = $null
+try {
+    $meta = [xml](Invoke-WebRequest -Uri "$maven/maven-metadata.xml" -UseBasicParsing -TimeoutSec 20).Content
+    $ultima = $meta.metadata.versioning.versions.version |
+        Where-Object { $_ -match "^$linea\.\d+\.\d+$" } |
+        Sort-Object { [version]$_ } | Select-Object -Last 1
+} catch { }
+$existentes = @(Get-ChildItem 'lib\mariadb-java-client-*.jar' -ErrorAction SilentlyContinue)
+if (-not $ultima) {
+    if ($existentes.Count -gt 0) {
+        Aviso 'No se pudo consultar la última versión (¿sin conexión a Internet?). Se usa el driver de java\lib.'
+    } else {
+        $ultima = $jarBase
+    }
+}
+if ($ultima) {
+    $jar = "mariadb-java-client-$ultima.jar"
+    if (Test-Path "lib\$jar") {
+        Ok "Driver al día: $jar"
+        Get-ChildItem 'lib\mariadb-java-client-*.jar' | Where-Object { $_.Name -ne $jar } | Remove-Item -Force
+    } else {
+        Info "Descargando $jar"
+        try {
+            Invoke-WebRequest -Uri "$maven/$ultima/$jar" -OutFile "lib\$jar.part" -UseBasicParsing -TimeoutSec 120
+            Move-Item -Force "lib\$jar.part" "lib\$jar"
+            # Deja solo este driver: con varios en lib/* el classpath mezclaría versiones.
+            Get-ChildItem 'lib\mariadb-java-client-*.jar' | Where-Object { $_.Name -ne $jar } | Remove-Item -Force
+        } catch {
+            Remove-Item "lib\$jar.part" -ErrorAction SilentlyContinue
+            if ($existentes.Count -gt 0) {
+                Aviso "No se pudo descargar $jar. Se usa el driver de java\lib."
+            } else {
+                Falla "No se pudo descargar el driver desde $maven/$ultima/$jar"
+                exit 1
+            }
+        }
     }
 }
 
