@@ -30,9 +30,10 @@
 --
 -- EJECUCIÓN SEGURA / IDEMPOTENCIA:
 --   Todo el script puede ejecutarse varias veces seguidas, o después de que las
---   tablas ya existan, sin error: CREATE DATABASE, cada CREATE TABLE y cada
---   CREATE TRIGGER usan IF NOT EXISTS. Si el esquema ya está creado, el script no
---   hace nada y termina sin fallar.
+--   tablas ya existan, sin error: CREATE DATABASE, cada CREATE TABLE y los triggers
+--   del aval usan IF NOT EXISTS; los triggers del límite de 4 ejemplares usan
+--   CREATE OR REPLACE TRIGGER, de modo que una base ya creada recibe su versión
+--   actual al volver a ejecutar el script.
 -- =====================================================================================
 
 -- Crea la base de datos si no existe, con soporte completo para UTF-8 (emojis incluidos).
@@ -313,14 +314,21 @@ END$$
 DELIMITER ;
 
 -- =====================================================================================
--- TRIGGER: trg_ejemplar_renta_max_4
+-- TRIGGERS: trg_ejemplar_renta_max_4 / trg_ejemplar_renta_max_4_update
 -- Regla de negocio del enunciado: "Cada socio puede tener alquilados, en un momento
--- dado, 4 ejemplares como máximo". Se valida antes de insertar un nuevo renglón de
--- ejemplar_renta cuyo ejemplar todavía no ha sido devuelto (Entrega IS NULL).
+-- dado, 4 ejemplares como máximo". Un ejemplar cuenta como alquilado mientras su
+-- Entrega sea NULL (todavía no ha sido devuelto).
+--   * _max_4 (INSERT): se rechaza el renglón nuevo solo si queda sin devolver
+--     (NEW.Entrega IS NULL) y el cliente ya tiene 4 ejemplares sin devolver. Un
+--     renglón histórico, ya devuelto, no cuenta y siempre se admite.
+--   * _max_4_update (UPDATE): cubre las dos formas de superar el límite sin insertar:
+--     reabrir un renglón devuelto (Entrega vuelve a NULL) o pasar un renglón sin
+--     devolver a otra renta (Renta_ID cambia). El propio renglón se excluye del
+--     conteo.
 -- =====================================================================================
 DELIMITER $$
 
-CREATE TRIGGER IF NOT EXISTS `trg_ejemplar_renta_max_4`
+CREATE OR REPLACE TRIGGER `trg_ejemplar_renta_max_4`
 BEFORE INSERT ON `ejemplar_renta`
 FOR EACH ROW
 BEGIN
@@ -328,17 +336,45 @@ BEGIN
     -- dueño de la renta a la que se está agregando este nuevo ejemplar.
     DECLARE ejemplares_activos INT UNSIGNED;
 
-    SELECT COUNT(*)
-    INTO ejemplares_activos
-    FROM `ejemplar_renta` er
-    INNER JOIN `renta` r ON r.`Renta_ID` = er.`Renta_ID`
-    WHERE r.`Cliente_ID` = (SELECT `Cliente_ID` FROM `renta` WHERE `Renta_ID` = NEW.`Renta_ID`)
-      AND er.`Entrega` IS NULL;
+    -- Un renglón ya devuelto no suma a los pendientes: no hay nada que validar.
+    IF NEW.`Entrega` IS NULL THEN
+        SELECT COUNT(*)
+        INTO ejemplares_activos
+        FROM `ejemplar_renta` er
+        INNER JOIN `renta` r ON r.`Renta_ID` = er.`Renta_ID`
+        WHERE r.`Cliente_ID` = (SELECT `Cliente_ID` FROM `renta` WHERE `Renta_ID` = NEW.`Renta_ID`)
+          AND er.`Entrega` IS NULL;
 
-    -- Si el cliente ya tiene 4 ejemplares sin devolver, se rechaza la nueva inserción.
-    IF ejemplares_activos >= 4 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'El cliente ya tiene 4 ejemplares alquilados sin devolver.';
+        -- Si el cliente ya tiene 4 ejemplares sin devolver, se rechaza la nueva inserción.
+        IF ejemplares_activos >= 4 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'El cliente ya tiene 4 ejemplares alquilados sin devolver.';
+        END IF;
+    END IF;
+END$$
+
+CREATE OR REPLACE TRIGGER `trg_ejemplar_renta_max_4_update`
+BEFORE UPDATE ON `ejemplar_renta`
+FOR EACH ROW
+BEGIN
+    DECLARE ejemplares_activos INT UNSIGNED;
+
+    -- Solo importa si el renglón queda sin devolver y antes no sumaba a ese cliente:
+    -- porque se reabre (OLD.Entrega no era NULL) o porque cambia de renta.
+    IF NEW.`Entrega` IS NULL
+       AND (OLD.`Entrega` IS NOT NULL OR NEW.`Renta_ID` <> OLD.`Renta_ID`) THEN
+        SELECT COUNT(*)
+        INTO ejemplares_activos
+        FROM `ejemplar_renta` er
+        INNER JOIN `renta` r ON r.`Renta_ID` = er.`Renta_ID`
+        WHERE r.`Cliente_ID` = (SELECT `Cliente_ID` FROM `renta` WHERE `Renta_ID` = NEW.`Renta_ID`)
+          AND er.`Entrega` IS NULL
+          AND er.`Ejemplar_Renta_ID` <> OLD.`Ejemplar_Renta_ID`;
+
+        IF ejemplares_activos >= 4 THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'El cliente ya tiene 4 ejemplares alquilados sin devolver.';
+        END IF;
     END IF;
 END$$
 

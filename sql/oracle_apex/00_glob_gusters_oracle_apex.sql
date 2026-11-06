@@ -235,11 +235,14 @@ COMMENT ON TABLE ejemplar_renta IS 'Entidad intermedia que resuelve la relación
 -- TRIGGER: trg_ejemplar_renta_max_4
 -- Regla de negocio: cada socio puede tener alquilados, en un momento dado, 4 ejemplares
 -- como máximo (ejemplares con ENTREGA nula = aún sin devolver).
--- Se usa un COMPOUND TRIGGER: las filas insertadas se registran por fila y la validación
+-- Se usa un COMPOUND TRIGGER: las filas afectadas se registran por fila y la validación
 -- se ejecuta al finalizar la sentencia, evitando el error ORA-04091 (tabla mutante).
+-- Se dispara en INSERT y en UPDATE de ENTREGA o RENTA_ID, y solo registra las filas que
+-- quedan sin devolver (ENTREGA nula): un renglón ya devuelto nunca suma a los pendientes,
+-- y reabrir una devolución o pasar un renglón a otra renta también respeta el límite.
 -- =====================================================================================
 CREATE OR REPLACE TRIGGER trg_ejemplar_renta_max_4
-FOR INSERT ON ejemplar_renta
+FOR INSERT OR UPDATE OF entrega, renta_id ON ejemplar_renta
 COMPOUND TRIGGER
 
     TYPE t_ids IS TABLE OF NUMBER INDEX BY PLS_INTEGER;
@@ -247,7 +250,9 @@ COMPOUND TRIGGER
 
     AFTER EACH ROW IS
     BEGIN
-        g_renta_ids(g_renta_ids.COUNT + 1) := :NEW.renta_id;
+        IF :NEW.entrega IS NULL THEN
+            g_renta_ids(g_renta_ids.COUNT + 1) := :NEW.renta_id;
+        END IF;
     END AFTER EACH ROW;
 
     AFTER STATEMENT IS
