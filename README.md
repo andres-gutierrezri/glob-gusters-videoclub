@@ -36,6 +36,7 @@ Motor de base de datos: **MariaDB** sobre entorno **XAMPP**.
     - [6.5 Si las tildes o la `ñ` se ven mal en la consola](#65-si-las-tildes-o-la-ñ-se-ven-mal-en-la-consola)
   - [7. Oracle APEX (opcional)](#7-oracle-apex-opcional)
   - [Probar la creación desde cero sin tocar tu base](#probar-la-creación-desde-cero-sin-tocar-tu-base)
+  - [Tildes y `ñ` en la terminal](#tildes-y-ñ-en-la-terminal)
   - [Errores frecuentes](#errores-frecuentes)
 - [Scripts de shell (`shell/`)](#scripts-de-shell-shell)
   - [Antes de empezar](#antes-de-empezar)
@@ -641,7 +642,8 @@ chcp 65001
 ```
 
 Esto solo afecta a **cómo se muestra** el texto; los datos en la base están guardados
-correctamente en `utf8mb4`.
+correctamente en `utf8mb4`. Los lanzadores de `shell\cmd\` ya lo hacen por ti; el resto de
+capas está en [Tildes y `ñ` en la terminal](#tildes-y-ñ-en-la-terminal).
 
 ### 7. Oracle APEX (opcional)
 
@@ -668,6 +670,43 @@ $B/bin/mariadb-admin -u root -h 127.0.0.1 -P 3399 shutdown; rm -rf "$T" /tmp/gg3
 
 El socket debe tener una ruta corta (el límite es de 103 caracteres), por eso se usa `/tmp`.
 
+### Tildes y `ñ` en la terminal
+
+Todo el proyecto trabaja en **UTF-8**: los archivos están guardados en UTF-8, la base usa
+`utf8mb4` y cada capa fija la codificación para que las tildes y la `ñ` se lean y se
+impriman igual en cualquier sistema.
+
+| Capa | Qué se hace | Dónde |
+|---|---|---|
+| SQL (MariaDB) | `SET NAMES utf8mb4;` al inicio de cada script, además de `--default-character-set=utf8mb4` en los lanzadores: el texto se interpreta bien aunque el cliente no se lance con esa opción (phpMyAdmin, otro cliente). | `sql/mariadb/`, `commands/`, `tests/` |
+| Python | `conexion.py` fuerza UTF-8 en `stdout` y `stderr` al importarse (`reconfigure`), así que `ddl.py`, `dml.py`, `dql.py`, `vdl.py`, `dcl.py`, `tcl.py` y `conexion_mariabd.py` imprimen UTF-8 aunque la salida se redirija a un archivo o a una bitácora. | `py/conexion.py` |
+| Java | `Conexion.configurarSalida()` (llamada en la primera línea de cada `main`) fuerza UTF-8 en `System.out` y `System.err` cuando la salida no va a una terminal; los fuentes se compilan con `javac -encoding UTF-8`. | `java/Conexion.java` |
+| PowerShell | `lib.ps1` pone la consola y `$OutputEncoding` en UTF-8 (sin BOM) y `PYTHONIOENCODING=utf-8`; los `.ps1` se guardan con BOM para que Windows PowerShell 5.1 lea bien sus tildes. | `shell/powershell/lib.ps1` |
+| CMD | `lib.cmd` ejecuta `chcp 65001`. Los mensajes de los `.cmd` no llevan tildes a propósito (el intérprete de lotes las trata mal según la página de códigos); la salida de SQL, Python y Java sí sale con tildes. | `shell/cmd/lib.cmd` |
+| Bash | No necesita ajustes: `bash` pasa los bytes tal cual y la terminal de Linux/macOS ya es UTF-8. | `shell/bash/` |
+
+Con los lanzadores de `shell/` y `sql/mariadb/check-mariadb.*` no hay que hacer nada. Si
+ejecutas los programas **a mano** en una consola de Windows, pon antes la consola en UTF-8
+(solo afecta a esa ventana):
+
+```powershell
+# Windows PowerShell
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false); $OutputEncoding = [Console]::OutputEncoding
+```
+
+```bat
+:: Windows CMD
+chcp 65001
+```
+
+En macOS y Linux basta con una terminal y un *locale* UTF-8 (`echo $LANG` debe terminar en
+`UTF-8`; si no, `export LANG=es_ES.UTF-8` o `export LANG=C.UTF-8`). En Oracle APEX y
+SQL Developer la codificación la gestiona el navegador o el programa; con SQL\*Plus define
+antes `NLS_LANG=AMERICAN_AMERICA.AL32UTF8`.
+
+Esto solo afecta a **cómo se muestra** el texto: los datos se guardan correctamente en
+`utf8mb4` en cualquier caso.
+
 ### Errores frecuentes
 
 | Mensaje | Causa y solución |
@@ -679,7 +718,7 @@ El socket debe tener una ruta corta (el límite es de 103 caracteres), por eso s
 | `ModuleNotFoundError: No module named 'pymysql'` | No activaste el entorno virtual o no ejecutaste `pip install -r requirements.txt`. |
 | `ClassNotFoundException` / `No suitable driver` en Java | Falta el JAR en `java/lib/`, o el separador del classpath es incorrecto para tu sistema (`;` Windows, `:` macOS/Linux). |
 | `class file has wrong version` / `invalid source release` | El JDK es anterior a 17. |
-| Tildes o `ñ` mal mostradas en Windows | Ejecuta los SQL con `-e "source ..."` (no canalices con `Get-Content`) y `--default-character-set=utf8mb4`. |
+| Tildes o `ñ` mal mostradas (`Ã³`, `Ã±`, `?`) | La terminal no está en UTF-8: ver [Tildes y `ñ` en la terminal](#tildes-y-ñ-en-la-terminal) (en Windows, `chcp 65001`). Ejecuta los SQL con `-e "source ..."` (no canalices con `Get-Content`) y `--default-character-set=utf8mb4`. |
 
 ## Scripts de shell (`shell/`)
 
@@ -796,40 +835,42 @@ shell\cmd\ejecutar-java.cmd
 - Los scripts de `sql/oracle_apex/` **no** se incluyen: requieren un Oracle Database o un workspace
   de APEX (ver [Versión para Oracle APEX](#versión-para-oracle-apex)).
 - Código de salida: `0` si todo terminó bien, distinto de `0` en cuanto algo falla (útil para
-  automatizar). Es normal ver 3 líneas `ERROR` durante las pruebas de integridad y algunos
+  automatizar). Es normal ver 4 líneas `ERROR` durante las pruebas de integridad y algunos
   errores 1558 en el diagnóstico (ver [Guía de ejecución](#guía-de-ejecución-por-sistema-operativo)).
-- Verificación: los lanzadores de **Bash** se ejecutaron en macOS contra una instancia
-  nueva y vacía de MariaDB 10.4.28 (8 scripts sin errores, 23/23 pruebas, Python y Java
-  completos). Los de **PowerShell** y **CMD** no se pudieron ejecutar en esa máquina, por no ser Windows.
+- Verificación: ver [Última verificación de ejecución](#última-verificación-de-ejecución). Los
+  lanzadores de **PowerShell** y **CMD** se ejecutaron en Windows 11 (25/25 pruebas) y los de
+  **Bash** se verificaron antes en macOS.
 
 ## Última verificación de ejecución
 
-Todo el proyecto se ejecutó de punta a punta el 2026-11-03 en el entorno siguiente. Es un
-registro de lo comprobado, no una garantía para otros equipos.
+Todo el proyecto se ejecutó de punta a punta el 2026-11-06 en el entorno siguiente, sobre una
+instancia **nueva y vacía** de MariaDB (datos temporales, puerto 3399, sin tocar el servidor
+habitual). Es un registro de lo comprobado, no una garantía para otros equipos.
 
 | Elemento | Versión |
 |---|---|
-| Sistema operativo | macOS (Darwin 25.6, arm64) |
-| Servidor | MariaDB 10.4.28 (XAMPP), puerto 3306 |
-| Python | 3.13.15, con PyMySQL 1.2.3 y mariadb 1.1.14 en `.venv` |
-| Java | JDK 26.0.2.1, MariaDB Connector/J 3.5.3 |
+| Sistema operativo | Windows 11 Pro Education (10.0.26200) |
+| Servidor | MariaDB 10.4.32 (binarios de XAMPP), puerto 3399 |
+| Python | 3.13.1, con PyMySQL 1.2.3 y mariadb 1.1.14 en `.venv` |
+| Java | JDK 23.0.2, MariaDB Connector/J 3.5.3 |
 
 | Qué se ejecutó | Resultado |
 |---|---|
-| Los 8 scripts SQL de `sql/mariadb/` en orden | Los 8 terminan sin errores (código 0). |
-| `tests/mariadb/glob_gusters_test.sql` | 23 de 23 pruebas aprobadas, **PROYECTO OK**. Las 3 líneas `ERROR` que imprime (auto-aval, quinto ejemplar y fechas inválidas) son los rechazos esperados. |
-| `sql/mariadb/check-mariadb.sh` | Termina bien. Solo aparecen 3 errores 1558 (`mysql.proc` desactualizada), documentados en el encabezado del script. |
-| `py/conexion.py`, `ddl`, `dml`, `dql` (sus 4 consultas por nombre), `vdl`, `dcl`, `tcl` y `conexion_mariabd.py` | Los 8 terminan sin errores. `vdl.py --drop` elimina las 2 vistas y volver a ejecutar `vdl.py` las restaura. |
-| `java/` (`Conexion`, `Ddl`, `Dml`, `Dql` con sus 4 consultas, `Vdl`, `Dcl`, `Tcl`) | Compilan (también con `javac -Xlint:all`, sin avisos) y las 7 clases terminan sin errores; `Vdl --drop` también se probó y se restauró. |
-| Python frente a Java | Las salidas de `dql`, `vdl`, `dml`, `tcl` y `dcl` son idénticas en ambos lenguajes (Java imprime `null` donde Python imprime `None`). |
-| Estática | `py_compile` con `-W error`, `sh -n` sobre `check-mariadb.sh` y `javac -Xlint:all` sin avisos; todas las rutas de archivos citadas en este README existen. |
-| Creación desde cero | En una instancia de MariaDB 10.4.28 nueva y vacía (datos temporales, puerto 3399): los 8 scripts terminan sin errores, quedan 11 tablas, 2 vistas, 3 triggers y las 2 cuentas de ejemplo, los conteos de filas coinciden con la tabla «Datos de prueba» y pasan las 23 pruebas; luego Python, Java y el diagnóstico también funcionan. Con la base aún inexistente, Python y Java sin traza piden ejecutar `glob_gusters.sql` (error 1049). |
-| Rutas de error | Una consulta desconocida (`dql inexistente`) sale con código 1 y lista las opciones; una contraseña incorrecta (o ausente) sale con código 1 y un mensaje claro, en Python y en Java; Python y Java se pueden lanzar desde otra carpeta. |
+| Los 8 scripts SQL de `sql/mariadb/` en orden (`shell/bash/ejecutar-sql.sh` en Git Bash) | Los 8 terminan sin errores. Quedan las 11 tablas, las 2 vistas, los **4 triggers** y las 2 cuentas de ejemplo. |
+| `tests/mariadb/glob_gusters_test.sql` | **25 de 25 pruebas aprobadas, PROYECTO OK.** Las 4 líneas `ERROR` que imprime (auto-aval, quinto ejemplar, reapertura de una devolución y fechas inválidas) son los rechazos esperados. |
+| `sql/mariadb/check-mariadb.sh`, `.ps1` y `.cmd` | Los tres imprimen solo la verificación de la conexión (`Conexión OK`) y sus parámetros. |
+| `shell/powershell/ejecutar-todo.ps1` y `shell/cmd/ejecutar-todo.cmd` | Ambos terminan con código 0: SQL, pruebas, diagnóstico, los 8 programas de Python (incluido `conexion_mariabd.py`) y las 7 clases de Java. |
+| `py/*.py` y `java/*` ejecutados a mano, sin variables de entorno y con la salida redirigida | Los 7 scripts de Python y las 7 clases de Java terminan con código 0 y escriben **UTF-8 válido**, con tildes y `ñ`, sin *mojibake* (`Ã³`, `Ã±`). |
+| Estática | `py_compile` con `-W error` y `javac -encoding UTF-8` sin errores. |
 
-Notas sobre lo que **no** quedó comprobado:
+Notas sobre lo que **no** quedó comprobado en esta corrida:
 
-- Los comandos de Windows y Linux de la guía no se ejecutaron en esa máquina.
-- Los scripts de `sql/oracle_apex/` no se ejecutaron (no hay un Oracle disponible).
+- Los lanzadores de Bash en Linux y macOS (se verificaron antes en macOS con MariaDB 10.4.28,
+  cuando eran 23 pruebas y 3 triggers) y los comandos de la guía para esos sistemas.
+- Los scripts de `sql/oracle_apex/` (no hay un Oracle disponible), incluido el
+  `COMPOUND TRIGGER` modificado para `UPDATE`.
+- La visualización en una consola interactiva con otra página de códigos (850/437): se
+  comprobaron los bytes de salida, no el aspecto en pantalla.
 
 ## Ejecución paso a paso en XAMPP MariaDB
 
@@ -1190,6 +1231,10 @@ bloque de código. Los números de línea se evitan a propósito (cambian al edi
 elemento se identifica por su nombre, que se puede buscar en el archivo. Los propios
 archivos de código también llevan comentarios línea por línea.
 
+Todos los scripts de `sql/mariadb/` y `tests/mariadb/` empiezan (tras su encabezado) con
+`SET NAMES utf8mb4;`, que fija la codificación de la sesión para las tildes y la `ñ`; no se
+repite en cada tabla de descripciones. Ver [Tildes y `ñ` en la terminal](#tildes-y-ñ-en-la-terminal).
+
 Índice: [raíz](#archivos-de-la-raíz) ·
 [docs/](#carpeta-docs) ·
 [sql/mariadb/](#carpeta-sqlmariadb) ·
@@ -1434,7 +1479,8 @@ Todos los scripts usan PyMySQL a través de `conexion.py`, con consultas paramet
 | Elemento | Qué hace |
 |---|---|
 | Docstring | Explica el módulo, el comando equivalente de consola y las variables de entorno. |
-| `import os`, `contextmanager`, `Path`, `pymysql`, `DictCursor` | Variables de entorno, bloques `with`, rutas portables, el conector y el cursor que devuelve diccionarios. |
+| `_salida_utf8()` | Se ejecuta al importar el módulo: fuerza UTF-8 (`reconfigure(encoding="utf-8", errors="replace")`) en `stdout` y `stderr` para que las tildes y la `ñ` salgan bien aunque la salida se redirija. Cubre todos los scripts de `py/`. |
+| `import os`, `sys`, `contextmanager`, `Path`, `pymysql`, `DictCursor` | Variables de entorno, bloques `with`, rutas portables, el conector y el cursor que devuelve diccionarios. |
 | `_cargar_env(ruta)` | Si el `.env` existe, lo lee línea por línea; ignora vacías, comentarios y líneas sin `=`; quita el prefijo `export `; separa en el primer `=`; y usa `os.environ.setdefault` para no pisar variables ya definidas en el sistema (quita comillas del valor). |
 | `_cargar_env(Path(__file__)...parent.parent / ".env")` | La ejecuta al importar el módulo, apuntando al `.env` de la raíz. |
 | `CONFIG` | Diccionario de parámetros: `host` (`localhost`), `port` (entero, `3306`), `user` (`root`), `password` (vacía por defecto), `database` (`glob_gusters`), `charset` `utf8mb4` y `cursorclass` `DictCursor`. |
@@ -1475,6 +1521,7 @@ ejecución: ver «Conexión y consultas desde Java».
 | Elemento | Qué hace |
 |---|---|
 | Imports y Javadoc | Entrada/salida de archivos, `java.sql.*` (JDBC) y colecciones; el Javadoc describe el comando equivalente y las variables. |
+| `configurarSalida()` | Si la salida no va a una terminal, reemplaza `System.out` y `System.err` por `PrintStream` en UTF-8 (en una terminal respeta la codificación que el JDK eligió para la consola). Cada `main` la llama en su primera línea. `esTerminal()` decide con `System.console()` y, en JDK 22+, con `Console.isTerminal()` por reflexión. |
 | `ENV_ARCHIVO` | Mapa que se llena al iniciar la clase con `cargarEnv()`; se declara antes que las constantes que lo usan. |
 | `HOST`, `PORT`, `USER`, `PASSWORD`, `DB` | Constantes de configuración obtenidas con `env(...)` (el puerto se convierte con `Integer.parseInt`). |
 | `env(nombre, defecto)` | Devuelve primero la variable del sistema, luego la del `.env` y por último el valor por defecto. |
