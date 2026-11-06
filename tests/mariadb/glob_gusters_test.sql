@@ -71,12 +71,12 @@ FROM `information_schema`.`tables`
 WHERE `table_schema` = 'glob_gusters' AND `table_type` = 'VIEW';
 
 -- ---------------------------------------------------------------------------------
--- PRUEBA 3: existen los 3 triggers de reglas de negocio.
+-- PRUEBA 3: existen los 4 triggers de reglas de negocio.
 -- ---------------------------------------------------------------------------------
 INSERT INTO `test_results` (`Nombre_Prueba`, `Resultado`, `Detalle`)
 SELECT
-    'Existen los 3 triggers de reglas de negocio',
-    IF(COUNT(*) = 3, 'PASS', 'FAIL'),
+    'Existen los 4 triggers de reglas de negocio',
+    IF(COUNT(*) = 4, 'PASS', 'FAIL'),
     CONCAT('Triggers encontrados: ', COUNT(*))
 FROM `information_schema`.`triggers`
 WHERE `trigger_schema` = 'glob_gusters';
@@ -196,6 +196,65 @@ FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4;
 DELETE FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4;
 DELETE FROM `renta` WHERE `Renta_ID` = @renta_max4;
 DELETE FROM `cliente` WHERE `Cliente_ID` = @cliente_max4;
+
+-- ---------------------------------------------------------------------------------
+-- PRUEBAS 7b y 7c: el límite de 4 solo cuenta ejemplares sin devolver (Entrega NULL).
+--   7b: con 4 ejemplares sin devolver, un renglón ya devuelto (Entrega con fecha) sí
+--       se admite, porque no suma a los pendientes.
+--   7c: ese renglón devuelto no puede reabrirse (UPDATE ... Entrega = NULL) mientras
+--       el socio tenga 4 sin devolver; el UPDATE debe ser rechazado por trigger.
+-- ---------------------------------------------------------------------------------
+-- Limpieza previa por si una corrida anterior fue interrumpida.
+DELETE er FROM `ejemplar_renta` er
+INNER JOIN `renta` r ON r.`Renta_ID` = er.`Renta_ID`
+INNER JOIN `cliente` c ON c.`Cliente_ID` = r.`Cliente_ID`
+WHERE c.`Dni` = 'TEST-MAX4-002';
+DELETE r FROM `renta` r
+INNER JOIN `cliente` c ON c.`Cliente_ID` = r.`Cliente_ID`
+WHERE c.`Dni` = 'TEST-MAX4-002';
+DELETE FROM `cliente` WHERE `Dni` = 'TEST-MAX4-002';
+
+INSERT INTO `cliente` (`Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
+VALUES ('TEST-MAX4-002', 'Cliente Prueba Max4 Devuelto', 'Dirección de prueba', '0000000000', NULL);
+SET @cliente_max4b = LAST_INSERT_ID();
+
+INSERT INTO `renta` (`Cliente_ID`, `Inicia`) VALUES (@cliente_max4b, CURDATE());
+SET @renta_max4b = LAST_INSERT_ID();
+
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`)
+SELECT @renta_max4b, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 0;
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`)
+SELECT @renta_max4b, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 1;
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`)
+SELECT @renta_max4b, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 2;
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`)
+SELECT @renta_max4b, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 3;
+-- Quinto renglón, pero ya devuelto: debe admitirse.
+INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`, `Entrega`)
+SELECT @renta_max4b, `Ejemplar_ID`, CURDATE() FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 4;
+
+INSERT INTO `test_results` (`Nombre_Prueba`, `Resultado`, `Detalle`)
+SELECT
+    'Trigger: un renglón ya devuelto no cuenta para el máximo de 4',
+    IF(COUNT(*) = 1, 'PASS', 'FAIL'),
+    CONCAT('Renglones devueltos registrados: ', COUNT(*), ' (se esperaba 1)')
+FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4b AND `Entrega` IS NOT NULL;
+
+-- Reabrir la devolución dejaría al socio con 5 sin devolver: debe ser rechazado.
+UPDATE `ejemplar_renta` SET `Entrega` = NULL
+WHERE `Renta_ID` = @renta_max4b AND `Entrega` IS NOT NULL;
+
+INSERT INTO `test_results` (`Nombre_Prueba`, `Resultado`, `Detalle`)
+SELECT
+    'Trigger: no se puede reabrir una devolución con 4 ya sin devolver',
+    IF(COUNT(*) = 1, 'PASS', 'FAIL'),
+    IF(COUNT(*) = 1, 'El UPDATE fue rechazado correctamente', 'El UPDATE no fue rechazado')
+FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4b AND `Entrega` IS NOT NULL;
+
+-- Limpieza de los datos generados por estas pruebas.
+DELETE FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4b;
+DELETE FROM `renta` WHERE `Renta_ID` = @renta_max4b;
+DELETE FROM `cliente` WHERE `Cliente_ID` = @cliente_max4b;
 
 -- ---------------------------------------------------------------------------------
 -- PRUEBA 8: la restricción CHECK de renta rechaza una fecha de devolución anterior
