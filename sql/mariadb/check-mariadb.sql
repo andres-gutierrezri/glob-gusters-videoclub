@@ -173,9 +173,9 @@ PREPARE consulta FROM @sql;
 EXECUTE consulta;
 DEALLOCATE PREPARE consulta;
 
--- Triggers definidos (deben ser los tres de reglas de negocio de glob_gusters.sql:
--- trg_cliente_aval_diferente_insert, trg_cliente_aval_diferente_update y
--- trg_ejemplar_renta_max_4).
+-- Triggers definidos (deben ser los cuatro de reglas de negocio de glob_gusters.sql:
+-- trg_cliente_aval_diferente_insert, trg_cliente_aval_diferente_update,
+-- trg_ejemplar_renta_max_4 y trg_ejemplar_renta_max_4_update).
 SET @sql = CONCAT('SHOW TRIGGERS FROM `', REPLACE(@db, '`', '``'), '`');
 PREPARE consulta FROM @sql;
 EXECUTE consulta;

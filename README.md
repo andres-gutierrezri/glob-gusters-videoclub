@@ -158,7 +158,7 @@ Los scripts `01_DDL.sql` y su equivalente agregan después `cliente.Email`,
 | Regla | Cómo se aplica |
 |---|---|
 | Un socio no puede ser su propio aval. | Triggers `trg_cliente_aval_diferente_insert` y `trg_cliente_aval_diferente_update` (MariaDB no permite `CHECK` sobre una columna `AUTO_INCREMENT`). |
-| Un socio no puede tener más de 4 ejemplares sin devolver. | Trigger `trg_ejemplar_renta_max_4` en `ejemplar_renta`. |
+| Un socio no puede tener más de 4 ejemplares sin devolver. | Triggers `trg_ejemplar_renta_max_4` (INSERT) y `trg_ejemplar_renta_max_4_update` (UPDATE) en `ejemplar_renta`; solo cuentan los renglones con `Entrega` nula. |
 | La fecha de devolución no puede ser anterior a la de inicio. | `CHECK` `chk_renta_fechas` en `renta`. |
 | Un actor no se repite en la misma película; un ejemplar no se repite en la misma renta. | `UNIQUE` en `reparto` y `ejemplar_renta`. |
 | No se puede borrar un registro que otro todavía necesita (una nacionalidad, productora, director, estado, socio o ejemplar en uso, ni un socio que avala a otro). | `ON DELETE RESTRICT` en las 9 llaves foráneas hacia `nacionalidad`, `productora`, `director`, `estado`, `cliente` (renta y aval) y `ejemplar` (en `ejemplar_renta`). |
@@ -202,9 +202,9 @@ ejemplo para un entorno de práctica; cámbialas en cualquier uso real.
 | Motor de almacenamiento | InnoDB (necesario para llaves foráneas y transacciones). |
 | Puerto de conexión | **3306** (en las variables de entorno `GLOB_GUSTERS_PORT` se puede cambiar). |
 | Usuario por defecto | `root` sin contraseña (valor de XAMPP; ajústalo si tu servidor la exige). |
-| Objetos | 11 tablas, 2 vistas, 3 triggers, 2 usuarios de ejemplo y 1 índice adicional. |
+| Objetos | 11 tablas, 2 vistas, 4 triggers, 2 usuarios de ejemplo y 1 índice adicional. |
 | Normalización | Tercera Forma Normal (3FN). |
-| Pruebas | 23 pruebas automáticas en `tests/mariadb/glob_gusters_test.sql`. |
+| Pruebas | 25 pruebas automáticas en `tests/mariadb/glob_gusters_test.sql`. |
 | Lenguajes de acceso | SQL, Python 3.9+ (PyMySQL / `mariadb`) y Java 17+ (JDBC). |
 
 ## Contenido del repositorio
@@ -417,8 +417,8 @@ desactualizada): son límites del entorno, descritos en el encabezado del script
 ### 3. Pruebas de integridad (`tests/`)
 
 Se ejecutan **después** de los ocho scripts, siempre con `--force`, sobre la base
-`glob_gusters`. Es normal ver 3 líneas `ERROR` (son las inserciones que los triggers y el
-`CHECK` deben rechazar); lo importante es la tabla final: **23 aprobadas, `PROYECTO OK`**.
+`glob_gusters`. Es normal ver 4 líneas `ERROR` (son las operaciones que los triggers y el
+`CHECK` deben rechazar); lo importante es la tabla final: **25 aprobadas, `PROYECTO OK`**.
 
 ```powershell
 # Windows (PowerShell)
@@ -689,7 +689,7 @@ Python y los de Java. Hay una versión por sistema operativo y cada una hace lo 
 
 | Lanzador | Qué ejecuta |
 |---|---|
-| `ejecutar-sql` | Los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (23 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
+| `ejecutar-sql` | Los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
 | `ejecutar-python` | Crea `.venv` si falta, instala `requirements.txt` y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
 | `ejecutar-java` | Descarga el driver JDBC a `java/lib/` si falta, compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
 | `ejecutar-todo` | Los tres anteriores, en ese orden, deteniéndose en el primer fallo. |
@@ -1000,10 +1000,10 @@ mismos conteos de filas en todas las tablas.
 1. Abre `http://localhost/phpmyadmin` con XAMPP en ejecución.
 2. Selecciona la base de datos `glob_gusters` en el panel izquierdo.
 3. Confirma que existan las 11 tablas del modelo, las vistas `v_ejemplares_detalle` y
-   `v_clientes_con_aval`, y que la pestaña **Triggers** muestre los tres disparadores
+   `v_clientes_con_aval`, y que la pestaña **Triggers** muestre los cuatro disparadores
    de reglas de negocio:
-   - `trg_ejemplar_renta_max_4` (en `ejemplar_renta`): máximo 4 ejemplares activos
-     por socio.
+   - `trg_ejemplar_renta_max_4` y `trg_ejemplar_renta_max_4_update` (en
+     `ejemplar_renta`): máximo 4 ejemplares sin devolver por socio.
    - `trg_cliente_aval_diferente_insert` y `trg_cliente_aval_diferente_update` (en
      `cliente`): un socio no puede ser su propio aval.
 
@@ -1011,7 +1011,7 @@ mismos conteos de filas en todas las tablas.
 
 `tests/mariadb/glob_gusters_test.sql` verifica de punta a punta que el despliegue fue
 correcto: existencia de las 11 tablas y las 2 vistas, datos cargados en cada tabla,
-ausencia de registros huérfanos, cumplimiento de los tres triggers y del `CHECK` de
+ausencia de registros huérfanos, cumplimiento de los cuatro triggers y del `CHECK` de
 fechas de `renta`, consistencia de las vistas y permisos de los usuarios creados en
 `05_DCL.sql`. Debe ejecutarse **con la bandera `--force`**, porque intencionalmente
 provoca errores esperados (inserciones que el motor debe rechazar) y necesita que la
@@ -1037,8 +1037,8 @@ Get-Content tests\mariadb\glob_gusters_test.sql | & "C:\xampp\mysql\bin\mariadb.
     --force glob_gusters < tests/mariadb/glob_gusters_test.sql
 ```
 
-Las 23 pruebas cubren: existencia de las 11 tablas y las 2 vistas, datos en cada tabla,
-registros huérfanos, los tres triggers, el `CHECK` de fechas, la coherencia de las vistas
+Las 25 pruebas cubren: existencia de las 11 tablas y las 2 vistas, datos en cada tabla,
+registros huérfanos, los cuatro triggers, el `CHECK` de fechas, la coherencia de las vistas
 y los permisos de los usuarios de ejemplo.
 
 El resultado es una tabla con una fila por prueba (`PASS`/`FAIL`) y un resumen final
@@ -1274,8 +1274,9 @@ Documentos de apoyo en PDF/imagen (no contienen código):
 
 #### `glob_gusters.sql` — esquema completo (DDL)
 
-Crea la base de datos, las 11 tablas, las restricciones y los 3 triggers. Es idempotente:
-todo usa `IF NOT EXISTS`.
+Crea la base de datos, las 11 tablas, las restricciones y los 4 triggers. Es idempotente:
+tablas y triggers del aval usan `IF NOT EXISTS`; los triggers del límite de 4 usan
+`CREATE OR REPLACE TRIGGER`, así una base ya creada recibe su versión actual.
 
 | Bloque | Qué hace |
 |---|---|
@@ -1391,7 +1392,7 @@ SQL Scripts* de APEX. Los nombres de columnas y tablas van en minúscula sin com
 | 11 `CREATE TABLE` | Mismas tablas y relaciones que en MariaDB. Diferencias: `pelicula.anio` lleva `CHECK (anio BETWEEN 1888 AND 2100)`; `actor.sexo` y `reparto.rol` llevan `CHECK ... IN`; `cliente` lleva `chk_cliente_aval (aval_cliente_id IS NULL OR aval_cliente_id <> cliente_id)`; `ejemplar.numero` lleva `CHECK (numero >= 0)`; `renta` lleva `chk_renta_fechas`. |
 | 10 `CREATE INDEX ix_...` | Oracle no indexa las llaves foráneas automáticamente; se crean índices sobre las FK que lo necesitan. |
 | 11 `COMMENT ON TABLE` | Descripción de cada tabla en el diccionario de datos. |
-| `trg_ejemplar_renta_max_4` | `COMPOUND TRIGGER ... FOR INSERT ON ejemplar_renta`: en `AFTER EACH ROW` guarda en una colección (`g_renta_ids`) las rentas insertadas; en `AFTER STATEMENT` recorre esa colección, obtiene el cliente de cada renta, cuenta sus ejemplares con `entrega IS NULL` y, si son más de 4, lanza `RAISE_APPLICATION_ERROR(-20001, ...)`. Se hace así para evitar el error ORA-04091 (tabla mutante). |
+| `trg_ejemplar_renta_max_4` | `COMPOUND TRIGGER ... FOR INSERT OR UPDATE OF entrega, renta_id ON ejemplar_renta`: en `AFTER EACH ROW` guarda en una colección (`g_renta_ids`) las rentas de los renglones que quedan sin devolver (`entrega` nula); en `AFTER STATEMENT` recorre esa colección, obtiene el cliente de cada renta, cuenta sus ejemplares con `entrega IS NULL` y, si son más de 4, lanza `RAISE_APPLICATION_ERROR(-20001, ...)`. Se hace así para evitar el error ORA-04091 (tabla mutante). |
 | Verificación (comentada) | Dos consultas para comprobar que hay 11 tablas y el trigger en estado `VALID`. |
 
 #### `00b_glob_gusters_insert_oracle.sql` — datos de prueba
@@ -1505,11 +1506,13 @@ elimina la tabla temporal. No usa procedimientos almacenados.
 |---|---|
 | 1 | Existen 11 tablas base (`information_schema.tables`). |
 | 2 | Existen 2 vistas. |
-| 3 | Existen 3 triggers. |
+| 3 | Existen 4 triggers. |
 | 4 | Cada una de las 11 tablas tiene al menos una fila (11 comprobaciones). |
 | 5 | No hay ejemplares ni rentas huérfanos (2 comprobaciones). |
 | 6 | El trigger de auto-aval rechaza un cliente que se avale a sí mismo (inserta el ID 999001, comprueba que no existe y limpia). |
 | 7 | El trigger de máximo 4: crea un socio de prueba, intenta registrar 5 ejemplares y comprueba que solo quedaron 4; luego limpia. |
+| 7b | Con 4 ejemplares sin devolver, un renglón ya devuelto (`Entrega` con fecha) sí se admite; limpia al terminar. |
+| 7c | Reabrir esa devolución (`Entrega = NULL`) con 4 ya sin devolver es rechazado por `trg_ejemplar_renta_max_4_update`. |
 | 8 | El `CHECK` de `renta` rechaza `Termina` anterior a `Inicia`. |
 | 9 | Las vistas devuelven tantas filas como sus tablas base (2 comprobaciones). |
 | 10 | `glob_gusters_reportes` solo tiene `SELECT` y `glob_gusters_mostrador` no tiene `DELETE` (2 comprobaciones). |
