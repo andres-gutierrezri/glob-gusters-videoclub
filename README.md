@@ -423,9 +423,11 @@ desactualizada): son límites del entorno, descritos en el encabezado del script
 
 ### 3. Pruebas de integridad (`tests/`)
 
-Se ejecutan **después** de los ocho scripts, siempre con `--force`, sobre la base
-`glob_gusters`. Es normal ver 4 líneas `ERROR` (son las operaciones que los triggers y el
-`CHECK` deben rechazar); lo importante es la tabla final: **25 aprobadas, `PROYECTO OK`**.
+Se ejecutan **después** de los ocho scripts, sobre la base `glob_gusters`. Los rechazos que
+los triggers y el `CHECK` deben producir se capturan dentro del propio script (bloques
+`BEGIN NOT ATOMIC` con un manejador de excepciones), así que **no se imprime ninguna línea
+`ERROR`**; lo importante es la tabla final: **25 aprobadas, `PROYECTO OK`**. Los comandos
+llevan `--force` por costumbre, pero ya no es obligatorio.
 
 ```powershell
 # Windows (PowerShell)
@@ -575,7 +577,7 @@ REM Diagnóstico del servidor (solo lectura; usa la base glob_gusters)
 
 REM Con otra base: agrega --init-command="SET @glob_gusters_db = 'mi_base'"
 
-REM Pruebas de integridad (después de los 8 scripts; esperan 4 líneas ERROR y "PROYECTO OK")
+REM Pruebas de integridad (después de los 8 scripts; deben terminar con "PROYECTO OK")
 "%MARIADB%" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters < tests\mariadb\glob_gusters_test.sql
 ```
 
@@ -835,8 +837,8 @@ shell\cmd\ejecutar-java.cmd
 - Los scripts de `sql/oracle_apex/` **no** se incluyen: requieren un Oracle Database o un workspace
   de APEX (ver [Versión para Oracle APEX](#versión-para-oracle-apex)).
 - Código de salida: `0` si todo terminó bien, distinto de `0` en cuanto algo falla (útil para
-  automatizar). Es normal ver 4 líneas `ERROR` durante las pruebas de integridad y algunos
-  errores 1558 en el diagnóstico (ver [Guía de ejecución](#guía-de-ejecución-por-sistema-operativo)).
+  automatizar). Las pruebas de integridad ya no imprimen líneas `ERROR`; en el diagnóstico completo
+  (comentado por defecto) sí pueden verse algunos errores 1558 (ver [Guía de ejecución](#guía-de-ejecución-por-sistema-operativo)).
 - Verificación: ver [Última verificación de ejecución](#última-verificación-de-ejecución). Los
   lanzadores de **PowerShell** y **CMD** se ejecutaron en Windows 11 (25/25 pruebas) y los de
   **Bash** se verificaron antes en macOS.
@@ -857,7 +859,7 @@ habitual). Es un registro de lo comprobado, no una garantía para otros equipos.
 | Qué se ejecutó | Resultado |
 |---|---|
 | Los 8 scripts SQL de `sql/mariadb/` en orden (`shell/bash/ejecutar-sql.sh` en Git Bash) | Los 8 terminan sin errores. Quedan las 11 tablas, las 2 vistas, los **4 triggers** y las 2 cuentas de ejemplo. |
-| `tests/mariadb/glob_gusters_test.sql` | **25 de 25 pruebas aprobadas, PROYECTO OK.** Las 4 líneas `ERROR` que imprime (auto-aval, quinto ejemplar, reapertura de una devolución y fechas inválidas) son los rechazos esperados. |
+| `tests/mariadb/glob_gusters_test.sql` | **25 de 25 pruebas aprobadas, PROYECTO OK.** Los 4 rechazos esperados (auto-aval, quinto ejemplar, reapertura de una devolución y fechas inválidas) se capturan en el script: no imprime ninguna línea `ERROR` y cada prueba verifica el mensaje del rechazo. Reverificado sin `--force` (código 0, stderr vacío); con un trigger eliminado a propósito las pruebas 3 y 20 fallan y el veredicto pasa a `REVISAR FALLAS`. |
 | `sql/mariadb/check-mariadb.sh`, `.ps1` y `.cmd` | Los tres imprimen solo la verificación de la conexión (`Conexión OK`) y sus parámetros. |
 | `shell/powershell/ejecutar-todo.ps1` y `shell/cmd/ejecutar-todo.cmd` | Ambos terminan con código 0: SQL, pruebas, diagnóstico, los 8 programas de Python (incluido `conexion_mariabd.py`) y las 7 clases de Java. |
 | `py/*.py` y `java/*` ejecutados a mano, sin variables de entorno y con la salida redirigida | Los 7 scripts de Python y las 7 clases de Java terminan con código 0 y escriben **UTF-8 válido**, con tildes y `ñ`, sin *mojibake* (`Ã³`, `Ã±`). |
@@ -1060,9 +1062,10 @@ mismos conteos de filas en todas las tablas.
 correcto: existencia de las 11 tablas y las 2 vistas, datos cargados en cada tabla,
 ausencia de registros huérfanos, cumplimiento de los cuatro triggers y del `CHECK` de
 fechas de `renta`, consistencia de las vistas y permisos de los usuarios creados en
-`05_DCL.sql`. Debe ejecutarse **con la bandera `--force`**, porque intencionalmente
-provoca errores esperados (inserciones que el motor debe rechazar) y necesita que la
-conexión continúe después de cada uno para poder verificarlos y limpiarlos:
+`05_DCL.sql`. Las operaciones que el motor debe rechazar se ejecutan dentro de un bloque
+`BEGIN NOT ATOMIC` con un manejador que guarda el mensaje del rechazo, y cada prueba lo
+comprueba; por eso la salida no trae líneas `ERROR`. Los comandos llevan `--force` como
+precaución, pero ya no es obligatorio:
 
 **Windows (PowerShell):**
 
@@ -1552,7 +1555,7 @@ implementación:
 
 #### `tests/mariadb/glob_gusters_test.sql` — pruebas de integridad
 
-Se ejecuta con `--force` tras los ocho scripts del proyecto. Crea la tabla temporal
+Se ejecuta tras los ocho scripts del proyecto (`--force` ya no es obligatorio). Crea la tabla temporal
 `test_results` (`Test_ID`, `Nombre_Prueba`, `Resultado ENUM('PASS','FAIL')`, `Detalle`),
 inserta una fila por prueba con `INSERT ... SELECT` y al final muestra el detalle, un
 resumen (total, aprobadas, fallidas y veredicto «PROYECTO OK»/«REVISAR FALLAS») y
@@ -1565,8 +1568,8 @@ elimina la tabla temporal. No usa procedimientos almacenados.
 | 3 | Existen 4 triggers. |
 | 4 | Cada una de las 11 tablas tiene al menos una fila (11 comprobaciones). |
 | 5 | No hay ejemplares ni rentas huérfanos (2 comprobaciones). |
-| 6 | El trigger de auto-aval rechaza un cliente que se avale a sí mismo (inserta el ID 999001, comprueba que no existe y limpia). |
-| 7 | El trigger de máximo 4: crea un socio de prueba, intenta registrar 5 ejemplares y comprueba que solo quedaron 4; luego limpia. |
+| 6 | El trigger de auto-aval rechaza un cliente que se avale a sí mismo (intenta insertar el ID 999001, captura el rechazo, comprueba su mensaje y que la fila no existe, y limpia). |
+| 7 | El trigger de máximo 4: crea un socio de prueba, intenta registrar 5 ejemplares y comprueba que solo quedaron 4 y que el quinto fue rechazado con su mensaje; luego limpia. |
 | 7b | Con 4 ejemplares sin devolver, un renglón ya devuelto (`Entrega` con fecha) sí se admite; limpia al terminar. |
 | 7c | Reabrir esa devolución (`Entrega = NULL`) con 4 ya sin devolver es rechazado por `trg_ejemplar_renta_max_4_update`. |
 | 8 | El `CHECK` de `renta` rechaza `Termina` anterior a `Inicia`. |
