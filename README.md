@@ -936,8 +936,8 @@ habitual). Es un registro de lo comprobado, no una garantía para otros equipos.
 |---|---|
 | Sistema operativo | Windows 11 Pro Education (10.0.26200) |
 | Servidor | MariaDB 10.4.32 (binarios de XAMPP), puerto 3399 |
-| Python | 3.13.1, con PyMySQL 1.2.3 y mariadb 1.1.14 en `.venv` |
-| Java | JDK 23.0.2, MariaDB Connector/J 3.5.3 |
+| Python | 3.13.1, con PyMySQL 1.2.3 y mariadb 1.1.14 en `.venv` (`pip` 26.3 tras la actualización de los lanzadores) |
+| Java | JDK 23.0.2, MariaDB Connector/J 3.5.3 en la corrida original y 3.5.11 tras la actualización automática de `ejecutar-java` |
 
 | Qué se ejecutó | Resultado |
 |---|---|
@@ -947,6 +947,11 @@ habitual). Es un registro de lo comprobado, no una garantía para otros equipos.
 | `shell/powershell/ejecutar-todo.ps1` y `shell/cmd/ejecutar-todo.cmd` | Ambos terminan con código 0: SQL, pruebas, diagnóstico, los 8 programas de Python (incluido `conexion_mariabd.py`) y las 7 clases de Java. |
 | `py/*.py` y `java/*` ejecutados a mano, sin variables de entorno y con la salida redirigida | Los 7 scripts de Python y las 7 clases de Java terminan con código 0 y escriben **UTF-8 válido**, con tildes y `ñ`, sin *mojibake* (`Ã³`, `Ã±`). |
 | Estática | `py_compile` con `-W error` y `javac -encoding UTF-8` sin errores. |
+| Actualización de `pip` en `ejecutar-python.ps1` y `.cmd` | Muestran «Actualizando pip» antes de instalar `requirements.txt` y continúan al fallar la actualización. Probados apuntando a un puerto sin servidor, para no tocar ninguna base. |
+| Actualización del driver en `ejecutar-java` (`.ps1`, `.cmd` y el paso del driver en `.sh`) | Pasan de la 3.5.3 a la **3.5.11** (la última 3.x), borran la anterior y repiten «al día»; sin Internet usan el driver existente. Con la 3.5.11, las 7 clases de Java terminan con código 0. La **4.0.0 se descartó**: todas las clases fallan con «ssl not enabled in the server» porque exige TLS y el MariaDB de XAMPP no lo tiene. |
+| Comprobación de versiones en `ejecutar-sql` (`.sh`, `.ps1`, `.cmd`) | Muestran el cliente (10.4.32) y el servidor (10.4.32) y avisan sin conexión; la lógica del mínimo 10.2.1 se probó con versiones simuladas. En PowerShell, además, las 25 pruebas y el diagnóstico terminan bien. |
+| Tabla dañada (error 1030 de Aria) en `py/` y `java/` | Se **simuló** el error: Python y Java imprimen los pasos de reparación y terminan con error; otros códigos se propagan. No se dañó una tabla real. |
+| `configurar-utf8` (`.ps1`, `.cmd`, `.sh`) | Dejan la sesión en UTF-8 (página 65001, `PYTHONIOENCODING`, `LANG`) y imprimen la línea de prueba con tildes y `ñ`; `-Persistente` no se ejecutó para no tocar el perfil. |
 
 Notas sobre lo que **no** quedó comprobado en esta corrida:
 
@@ -956,6 +961,9 @@ Notas sobre lo que **no** quedó comprobado en esta corrida:
   `COMPOUND TRIGGER` modificado para `UPDATE`.
 - La visualización en una consola interactiva con otra página de códigos (850/437): se
   comprobaron los bytes de salida, no el aspecto en pantalla.
+- `ejecutar-java.sh` y `ejecutar-python.sh` de punta a punta en Git Bash de Windows: el primero
+  usa el classpath con `:` y el segundo no encuentra `python3` (solo Linux y macOS).
+- Una tabla Aria realmente dañada (solo se simuló el error).
 
 ## Ejecución paso a paso en XAMPP MariaDB
 
