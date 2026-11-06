@@ -33,6 +33,7 @@ public class Tcl {
     static final int NUMERO_EJEMPLAR = 2;
 
     public static void main(String[] args) throws SQLException {
+        Conexion.configurarSalida();
         // Abre la conexión y la cierra automáticamente al terminar.
         try (Connection con = Conexion.conectar()) {
             // Busca el ID del cliente a partir de su DNI.

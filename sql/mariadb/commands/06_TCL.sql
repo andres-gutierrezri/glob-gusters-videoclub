@@ -28,6 +28,10 @@
 --   numérico fijo.
 -- =====================================================================================
 
+-- Codificación: SET NAMES fija utf8mb4 en la sesión para que las tildes y la ñ se lean y se
+-- impriman bien aunque el cliente no se haya lanzado con --default-character-set=utf8mb4.
+SET NAMES utf8mb4;
+
 USE `glob_gusters`;
 
 -- Cliente de ejemplo: Andrés Torres, localizado por DNI (no por un Cliente_ID fijo).

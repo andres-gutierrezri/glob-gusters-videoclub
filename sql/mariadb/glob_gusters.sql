@@ -36,6 +36,10 @@
 --   actual al volver a ejecutar el script.
 -- =====================================================================================
 
+-- Codificación: SET NAMES fija utf8mb4 en la sesión para que las tildes y la ñ se lean y se
+-- impriman bien aunque el cliente no se haya lanzado con --default-character-set=utf8mb4.
+SET NAMES utf8mb4;
+
 -- Crea la base de datos si no existe, con soporte completo para UTF-8 (emojis incluidos).
 CREATE DATABASE IF NOT EXISTS `glob_gusters` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 

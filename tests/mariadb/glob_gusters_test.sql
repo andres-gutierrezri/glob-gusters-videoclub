@@ -37,6 +37,10 @@
 --   sesión actual) y se elimina explícitamente al terminar.
 -- =====================================================================================
 
+-- Codificación: SET NAMES fija utf8mb4 en la sesión para que las tildes y la ñ se lean y se
+-- impriman bien aunque el cliente no se haya lanzado con --default-character-set=utf8mb4.
+SET NAMES utf8mb4;
+
 USE `glob_gusters`;
 
 -- Tabla temporal (vive sólo durante esta sesión) donde se acumulan los resultados.

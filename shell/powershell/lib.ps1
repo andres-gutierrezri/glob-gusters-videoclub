@@ -5,6 +5,7 @@
 #
 # Define:
 #   $Raiz, $SqlScripts          Raíz del proyecto y los 8 scripts SQL en orden.
+#   (al cargarse)               Deja la consola, $OutputEncoding y PYTHONIOENCODING en UTF-8 (tildes y ñ).
 #   Info / Ok / Aviso / Falla   Mensajes con color.
 #   Cargar-Conexion             Resuelve host, puerto, usuario, clave y base (sistema > .env > defecto).
 #   Buscar-Cliente              Encuentra mariadb.exe (o mysql.exe).
@@ -14,6 +15,16 @@
 #   GLOB_GUSTERS_HOST, GLOB_GUSTERS_PORT, GLOB_GUSTERS_USER, GLOB_GUSTERS_PASSWORD,
 #   GLOB_GUSTERS_DB. Además, MARIADB_BIN indica la ruta del cliente (opcional).
 # =====================================================================================
+
+# Salida en UTF-8 (sin BOM) para que las tildes y la ñ se impriman bien: la consola, lo que
+# PowerShell lee de los programas externos (mariadb, python, java) y la de Python.
+# Windows PowerShell 5.1 usa por defecto la página de códigos OEM (850/437) y rompe los acentos.
+try {
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [Console]::OutputEncoding = $utf8
+    $OutputEncoding = $utf8
+} catch { }   # sin consola asociada (salida redirigida en algunos entornos): se ignora
+$env:PYTHONIOENCODING = 'utf-8'
 
 $script:Raiz = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $script:EnvArchivo = Join-Path $script:Raiz '.env'

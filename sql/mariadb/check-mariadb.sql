@@ -66,6 +66,10 @@
 --     sh sql/mariadb/check-mariadb.sh
 -- =====================================================================================
 
+-- Codificación: SET NAMES fija utf8mb4 en la sesión para que las tildes y la ñ se lean y se
+-- impriman bien aunque el cliente no se haya lanzado con --default-character-set=utf8mb4.
+SET NAMES utf8mb4;
+
 -- Base de datos del proyecto que se revisa en las secciones 7 y 8: el valor que haya
 -- definido el lanzador (a partir de GLOB_GUSTERS_DB) o 'glob_gusters' por defecto.
 SET @db = COALESCE(@glob_gusters_db, 'glob_gusters');

@@ -50,6 +50,7 @@ public class Vdl {
     }
 
     public static void main(String[] args) throws SQLException {
+        Conexion.configurarSalida();
         // Abre la conexión y la cierra automáticamente al terminar.
         try (Connection con = Conexion.conectar()) {
             // Con la opción --drop solo se eliminan las vistas y se termina.

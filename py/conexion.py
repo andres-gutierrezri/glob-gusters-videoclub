@@ -25,6 +25,8 @@ Prueba rápida de la conexión:
 
 # Módulo estándar para leer variables de entorno (os.getenv) y escribirlas (os.environ).
 import os
+# Flujos de salida estándar (sys.stdout / sys.stderr), cuya codificación se fija abajo.
+import sys
 # `contextmanager` convierte una función generadora en un bloque `with ... as ...`.
 from contextlib import contextmanager
 # `Path` representa rutas de archivos de forma portable entre Windows, macOS y Linux.
@@ -36,6 +38,26 @@ import pymysql
 from pymysql.constants import CLIENT
 # Cursor que devuelve cada fila como diccionario {columna: valor} en vez de tupla.
 from pymysql.cursors import DictCursor
+
+
+def _salida_utf8():
+    """Fuerza UTF-8 en la salida estándar para que las tildes y la ñ se impriman bien.
+
+    Sin esto, al redirigir la salida (a un archivo, una tubería o una bitácora) Python usa la
+    codificación local (cp1252 en Windows, ASCII con LANG=C en Linux) y escribe bytes que
+    los demás programas no leen como UTF-8, o falla con UnicodeEncodeError. En una terminal
+    no cambia nada visible, pero la terminal debe estar en UTF-8 (en Windows: `chcp 65001`;
+    los lanzadores de shell/ ya lo hacen). Se ejecuta al importar este módulo, así que cubre
+    ddl.py, dml.py, dql.py, vdl.py, dcl.py, tcl.py y conexion_mariabd.py.
+    """
+    for flujo in (sys.stdout, sys.stderr):
+        try:
+            flujo.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass  # flujo sustituido por otro objeto (p. ej. un IDE) que no admite reconfigure
+
+
+_salida_utf8()
 
 
 def _cargar_env(ruta):

@@ -28,6 +28,10 @@
 -- No se antepone USE porque GRANT/CREATE USER son sentencias a nivel de servidor,
 -- pero los privilegios sí se otorgan explícitamente sobre el esquema `glob_gusters`.
 
+-- Codificación: SET NAMES fija utf8mb4 en la sesión para que las tildes y la ñ se lean y se
+-- impriman bien aunque el cliente no se haya lanzado con --default-character-set=utf8mb4.
+SET NAMES utf8mb4;
+
 -- ---------------------------------------------------------------------------------
 -- CREATE USER: crea un usuario de aplicación de sólo lectura para reportes,
 -- válido únicamente desde el host local (típico en un entorno XAMPP de desarrollo).

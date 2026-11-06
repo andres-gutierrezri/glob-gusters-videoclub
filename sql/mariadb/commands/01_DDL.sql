@@ -23,6 +23,10 @@
 --   hace nada en vez de fallar.
 -- =====================================================================================
 
+-- Codificación: SET NAMES fija utf8mb4 en la sesión para que las tildes y la ñ se lean y se
+-- impriman bien aunque el cliente no se haya lanzado con --default-character-set=utf8mb4.
+SET NAMES utf8mb4;
+
 -- Selecciona el esquema del proyecto como base de datos activa.
 USE `glob_gusters`;
 

@@ -54,6 +54,7 @@ public class Ddl {
             "DROP TABLE IF EXISTS `tabla_prueba`");
 
     public static void main(String[] args) throws SQLException {
+        Conexion.configurarSalida();
         // Abre la conexión (cuenta por defecto) y la cierra automáticamente al terminar.
         try (Connection con = Conexion.conectar()) {
             // Ejecuta cada sentencia DDL en orden.

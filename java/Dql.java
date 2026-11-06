@@ -66,6 +66,7 @@ public class Dql {
     }
 
     public static void main(String[] args) throws SQLException {
+        Conexion.configurarSalida();
         // Sin argumentos se ejecutan todas las consultas; con argumentos, solo las nombradas.
         List<String> nombres = args.length == 0 ? List.copyOf(CONSULTAS.keySet()) : List.of(args);
         // Detecta nombres que no existan en el catálogo para fallar antes de conectar.

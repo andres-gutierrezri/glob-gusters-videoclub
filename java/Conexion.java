@@ -1,6 +1,11 @@
 // Entrada/salida de archivos: se usa para leer el archivo .env.
+import java.io.Console;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 // Files ofrece utilidades para leer archivos; Path representa una ruta de archivo.
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 // Clases JDBC: conexión, gestor de drivers, sentencias preparadas y resultados.
@@ -43,6 +48,38 @@ import java.util.Map;
  *     java -cp "out:lib/*" Conexion        (Windows: java -cp "out;lib/*" Conexion)
  */
 public class Conexion {
+
+    /**
+     * Fuerza UTF-8 en System.out y System.err cuando la salida NO va a una terminal
+     * (redirección a un archivo, tubería o bitácora), para que las tildes y la ñ salgan
+     * como UTF-8 y no en la codificación local (Cp1252 en Windows). Si la salida es una
+     * terminal se respeta la que el JDK ya eligió según la consola, que es la correcta.
+     * Cada main() la llama en su primera línea. En Windows, para ver bien los acentos en
+     * una terminal, esta debe estar en UTF-8 (`chcp 65001`; los lanzadores de shell/ ya
+     * lo hacen).
+     */
+    public static void configurarSalida() {
+        if (esTerminal()) {
+            return;
+        }
+        System.setOut(new PrintStream(new FileOutputStream(FileDescriptor.out), true, StandardCharsets.UTF_8));
+        System.setErr(new PrintStream(new FileOutputStream(FileDescriptor.err), true, StandardCharsets.UTF_8));
+    }
+
+    /** true si la salida va a una terminal. */
+    private static boolean esTerminal() {
+        Console consola = System.console();
+        if (consola == null) {
+            return false;
+        }
+        try {
+            // JDK 22+: System.console() ya no es null aunque se redirija; isTerminal() lo aclara.
+            return (boolean) Console.class.getMethod("isTerminal").invoke(consola);
+        } catch (ReflectiveOperationException e) {
+            // JDK 17-21: console() distinto de null solo ocurre cuando hay terminal.
+            return true;
+        }
+    }
 
     /** Variables leídas de .env (se declara antes que las constantes que la usan). */
     private static final Map<String, String> ENV_ARCHIVO = cargarEnv();
@@ -247,6 +284,7 @@ public class Conexion {
 
     // Punto de entrada de la prueba rápida de conexión.
     public static void main(String[] args) throws SQLException {
+        configurarSalida();
         // La conexión se cierra automáticamente al salir del bloque try.
         try (Connection con = conectar()) {
             // Muestra versión del servidor, base de datos actual y cuenta conectada.
