@@ -192,6 +192,49 @@ public class Conexion {
         }
     }
 
+    /** Programa que se ejecuta dentro de {@link #correr}; puede lanzar SQLException. */
+    @FunctionalInterface
+    public interface Principal {
+        void ejecutar() throws SQLException;
+    }
+
+    /** Códigos de error de tabla dañada: 1030 (error del motor), 144/145 (tabla marcada como dañada) y 1194/1195 (CHECK TABLE). */
+    private static final List<Integer> ERRORES_TABLA_DANADA = List.of(144, 145, 1030, 1194, 1195);
+
+    /** Texto que se muestra cuando una tabla del servidor está dañada en disco (esquema mysql, motor Aria). */
+    private static final String AYUDA_TABLA_DANADA = """
+            Suele pasar tras un cierre sucio de XAMPP; las tablas de permisos del esquema mysql
+            usan el motor Aria. Esto no es un fallo del proyecto. Para repararla:
+              1. Con MariaDB encendido, busca la tabla dañada:
+                   mysqlcheck -u root -p --check --databases mysql
+              2. Repárala (o usa REPAIR TABLE mysql.<tabla>;):
+                   mysqlcheck -u root -p --repair --databases mysql
+              3. Si no repara: detén MySQL en XAMPP, copia la carpeta mysql\\data como respaldo y
+                   cd C:\\xampp\\mysql\\data\\mysql
+                   ..\\..\\bin\\aria_chk.exe --recover --force *.MAI
+                 Si aún falla, con el servidor apagado borra data\\aria_log.* y data\\aria_log_control
+                 (MariaDB los recrea) o restaura data\\mysql desde mysql\\backup\\mysql.
+              4. Arranca MySQL y vuelve a ejecutar el programa.
+            Para evitarlo, detén MySQL con el botón Stop de XAMPP antes de apagar el equipo.""";
+
+    /**
+     * Ejecuta el programa; si el servidor informa una tabla dañada, explica cómo repararla
+     * sin mostrar la traza técnica y sale con código 1 (igual que py/conexion.py). Cualquier
+     * otro error se propaga sin modificar.
+     */
+    public static void correr(Principal programa) throws SQLException {
+        try {
+            programa.ejecutar();
+        } catch (SQLException error) {
+            if (ERRORES_TABLA_DANADA.contains(error.getErrorCode())) {
+                System.err.println("El servidor MariaDB informó una tabla dañada: " + error.getMessage());
+                System.err.println(AYUDA_TABLA_DANADA);
+                System.exit(1);
+            }
+            throw error;
+        }
+    }
+
     /** Ejecuta un SELECT/SHOW y devuelve todas las filas como lista de mapas (columna -> valor). */
     static List<Map<String, Object>> consultar(Connection con, String sql, Object... params) throws SQLException {
         // try-with-resources: la sentencia y el resultado se cierran solos al terminar.
@@ -285,6 +328,11 @@ public class Conexion {
     // Punto de entrada de la prueba rápida de conexión.
     public static void main(String[] args) throws SQLException {
         configurarSalida();
+        correr(() -> principal(args));
+    }
+
+    /** Cuerpo del programa; main lo ejecuta con correr() para explicar tablas dañadas. */
+    private static void principal(String[] args) throws SQLException {
         // La conexión se cierra automáticamente al salir del bloque try.
         try (Connection con = conectar()) {
             // Muestra versión del servidor, base de datos actual y cuenta conectada.

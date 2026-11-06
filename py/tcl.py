@@ -17,7 +17,7 @@ Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
 import pymysql
 
 # Funciones comunes de conexion.py.
-from conexion import conexion, consultar, ejecutar, imprimir
+from conexion import conexion, consultar, ejecutar, imprimir, principal, ERRORES_TABLA_DANADA
 
 # DNI del socio de ejemplo (se busca por llave natural, no por ID fijo).
 DNI_CLIENTE = "1000000004"  # Andrés Torres
@@ -75,6 +75,9 @@ def main():
                             (id_renta, id_ejemplar),
                         )
                     except pymysql.err.OperationalError as error:
+                        # Una tabla dañada no es un rechazo del trigger: sube al manejo común.
+                        if error.args[0] in ERRORES_TABLA_DANADA:
+                            raise
                         # Trigger de máximo 4 ejemplares: se conserva sólo el encabezado.
                         print("Detalle rechazado, ROLLBACK TO SAVEPOINT:", error.args[1])
                         cur.execute("ROLLBACK TO SAVEPOINT `sp_renta_creada`")
@@ -105,4 +108,4 @@ def main():
 
 # Ejecuta main() solo al lanzar el archivo directamente.
 if __name__ == "__main__":
-    main()
+    principal(main)

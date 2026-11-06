@@ -16,7 +16,7 @@ Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
 import sys
 
 # Funciones comunes de conexion.py.
-from conexion import conexion, consultar, ejecutar, imprimir
+from conexion import conexion, consultar, ejecutar, imprimir, principal
 
 # Cada vista: nombre -> (sentencia que la crea, consulta que la verifica).
 VISTAS = {
@@ -61,4 +61,4 @@ def main(argv):
 
 # Al lanzar el archivo, pasa a main() los argumentos (sin el nombre del script).
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    principal(main, sys.argv[1:])

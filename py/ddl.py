@@ -12,7 +12,7 @@ Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
 """
 
 # Funciones comunes de conexion.py: context manager de conexión, SELECT, escritura e impresión.
-from conexion import conexion, consultar, ejecutar, imprimir
+from conexion import conexion, consultar, ejecutar, imprimir, principal
 
 # Lista ordenada de sentencias DDL; se ejecutan una tras otra.
 SENTENCIAS = [
@@ -74,4 +74,4 @@ def main():
 
 # Ejecuta main() solo cuando el archivo se lanza directamente (python py/ddl.py).
 if __name__ == "__main__":
-    main()
+    principal(main)

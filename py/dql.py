@@ -16,7 +16,7 @@ Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
 import sys
 
 # Funciones comunes de conexion.py (aquí no se necesita `ejecutar`: solo se lee).
-from conexion import conexion, consultar, imprimir
+from conexion import conexion, consultar, imprimir, principal
 
 # Catálogo de consultas: nombre corto -> (título para mostrar, sentencia SQL).
 CONSULTAS = {
@@ -81,4 +81,4 @@ def main(argv):
 
 # Al lanzar el archivo, pasa a main() los argumentos (sin el nombre del script).
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    principal(main, sys.argv[1:])

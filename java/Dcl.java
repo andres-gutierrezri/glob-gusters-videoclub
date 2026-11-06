@@ -46,6 +46,11 @@ public class Dcl {
 
     public static void main(String[] args) throws SQLException {
         Conexion.configurarSalida();
+        Conexion.correr(() -> principal(args));
+    }
+
+    /** Cuerpo del programa; main lo ejecuta con Conexion.correr() para explicar tablas dañadas. */
+    private static void principal(String[] args) throws SQLException {
         // Requiere privilegios administrativos (root) para crear usuarios y conceder permisos.
         try (Connection con = Conexion.conectar()) {
             for (Map.Entry<String, Cuenta> usuario : USUARIOS.entrySet()) {

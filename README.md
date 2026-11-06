@@ -729,6 +729,7 @@ Esto solo afecta a **cómo se muestra** el texto: los datos se guardan correctam
 |---|---|
 | `Acceso denegado para 'root' en localhost:3306 sin contraseña` (Python/Java) o `Access denied for user 'root'@'localhost'` (SQL) | El usuario tiene contraseña y no se envió. Define `GLOB_GUSTERS_PASSWORD` en `.env` (Python/Java) o agrega `-p` (SQL). |
 | `Acceso denegado para ...: el usuario o la contraseña son incorrectos` | Se envió una contraseña y el servidor la rechazó: revisa `GLOB_GUSTERS_USER` y `GLOB_GUSTERS_PASSWORD` en el `.env` o en las variables del sistema. Si además tienes MySQL de Oracle instalado, comprueba que conectas al servidor correcto (`-h 127.0.0.1 -P 3306`) y no a su socket. |
+| `Got error 176 "Read page with wrong checksum" from storage engine Aria` (o «tabla dañada») | Una tabla del esquema `mysql` quedó dañada, normalmente por un cierre sucio de XAMPP. Los programas de `py/` y `java/` imprimen los pasos: `mysqlcheck -u root -p --check --databases mysql`, luego `--repair`; si no basta, con MySQL detenido `aria_chk --recover --force *.MAI` en `mysql\data\mysql`. Para evitarlo, detén MySQL con **Stop** antes de apagar el equipo. |
 | `Unknown database 'glob_gusters'` / error 1049 | Aún no ejecutaste `glob_gusters.sql` (paso 1). |
 | `requires MariaDB Connector/C >= 3.3.1` al hacer `pip install` | Falta el Connector/C del sistema (ver tabla de instalación) o comenta `mariadb` en `requirements.txt`. |
 | `ModuleNotFoundError: No module named 'pymysql'` | No activaste el entorno virtual o no ejecutaste `pip install -r requirements.txt`. |
@@ -1497,6 +1498,7 @@ Todos los scripts usan PyMySQL a través de `conexion.py`, con consultas paramet
 |---|---|
 | Docstring | Explica el módulo, el comando equivalente de consola y las variables de entorno. |
 | `_salida_utf8()` | Se ejecuta al importar el módulo: fuerza UTF-8 (`reconfigure(encoding="utf-8", errors="replace")`) en `stdout` y `stderr` para que las tildes y la `ñ` salgan bien aunque la salida se redirija. Cubre todos los scripts de `py/`. |
+| `principal(funcion, *args)` | Ejecuta `funcion(*args)` (todos los scripts de `py/` la usan en su bloque `__main__`). Si el servidor informa una tabla dañada (errores 1030, 144, 145, 1194, 1195) termina con los pasos de reparación (`explicar_tabla_danada`) en lugar del traceback; cualquier otro error se propaga igual. |
 | `import os`, `sys`, `contextmanager`, `Path`, `pymysql`, `DictCursor` | Variables de entorno, bloques `with`, rutas portables, el conector y el cursor que devuelve diccionarios. |
 | `_cargar_env(ruta)` | Si el `.env` existe, lo lee línea por línea; ignora vacías, comentarios y líneas sin `=`; quita el prefijo `export `; separa en el primer `=`; y usa `os.environ.setdefault` para no pisar variables ya definidas en el sistema (quita comillas del valor). |
 | `_cargar_env(Path(__file__)...parent.parent / ".env")` | La ejecuta al importar el módulo, apuntando al `.env` de la raíz. |
@@ -1539,6 +1541,7 @@ ejecución: ver «Conexión y consultas desde Java».
 |---|---|
 | Imports y Javadoc | Entrada/salida de archivos, `java.sql.*` (JDBC) y colecciones; el Javadoc describe el comando equivalente y las variables. |
 | `configurarSalida()` | Si la salida no va a una terminal, reemplaza `System.out` y `System.err` por `PrintStream` en UTF-8 (en una terminal respeta la codificación que el JDK eligió para la consola). Cada `main` la llama en su primera línea. `esTerminal()` decide con `System.console()` y, en JDK 22+, con `Console.isTerminal()` por reflexión. |
+| `correr(Principal)` | Ejecuta el programa; si el servidor informa una tabla dañada (mismos errores que en Python) imprime los pasos de reparación y sale con código 1; cualquier otro error se propaga igual. Cada `main` la usa (`Conexion.correr(() -> principal(args))`). |
 | `ENV_ARCHIVO` | Mapa que se llena al iniciar la clase con `cargarEnv()`; se declara antes que las constantes que lo usan. |
 | `HOST`, `PORT`, `USER`, `PASSWORD`, `DB` | Constantes de configuración obtenidas con `env(...)` (el puerto se convierte con `Integer.parseInt`). |
 | `env(nombre, defecto)` | Devuelve primero la variable del sistema, luego la del `.env` y por último el valor por defecto. |

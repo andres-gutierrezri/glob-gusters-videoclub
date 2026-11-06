@@ -142,6 +142,47 @@ def conectar(**cambios):
         raise
 
 
+# Texto que se muestra cuando una tabla del servidor está dañada en disco (por ejemplo, las
+# tablas de permisos del esquema mysql, que usan el motor Aria).
+AYUDA_TABLA_DANADA = r"""El servidor MariaDB informó una tabla dañada: {detalle}
+Suele pasar tras un cierre sucio de XAMPP; las tablas de permisos del esquema mysql
+usan el motor Aria. Esto no es un fallo del proyecto. Para repararla:
+  1. Con MariaDB encendido, busca la tabla dañada:
+       mysqlcheck -u root -p --check --databases mysql
+  2. Repárala (o usa REPAIR TABLE mysql.<tabla>;):
+       mysqlcheck -u root -p --repair --databases mysql
+  3. Si no repara: detén MySQL en XAMPP, copia la carpeta mysql\data como respaldo y
+       cd C:\xampp\mysql\data\mysql
+       ..\..\bin\aria_chk.exe --recover --force *.MAI
+     Si aún falla, con el servidor apagado borra data\aria_log.* y data\aria_log_control
+     (MariaDB los recrea) o restaura data\mysql desde mysql\backup\mysql.
+  4. Arranca MySQL y vuelve a ejecutar el script.
+Para evitarlo, detén MySQL con el botón Stop de XAMPP antes de apagar el equipo."""
+
+# Códigos de error de tabla dañada: 1030 (error del motor), 144/145 (tabla marcada como
+# dañada) y 1194/1195 (tabla dañada según CHECK TABLE).
+ERRORES_TABLA_DANADA = (144, 145, 1030, 1194, 1195)
+
+
+def explicar_tabla_danada(codigo, detalle):
+    """Si `codigo` es de tabla dañada, termina el programa con los pasos de reparación.
+
+    No hace nada con otros códigos: quien llama debe propagar el error original.
+    """
+    if codigo in ERRORES_TABLA_DANADA:
+        raise SystemExit(AYUDA_TABLA_DANADA.format(detalle=detalle))
+
+
+def principal(funcion, *args):
+    """Ejecuta `funcion(*args)`; una tabla dañada se explica sin mostrar la traza técnica."""
+    try:
+        return funcion(*args)
+    except pymysql.err.OperationalError as error:
+        explicar_tabla_danada(error.args[0], error.args[1] if len(error.args) > 1 else error)
+        # Cualquier otro error se propaga sin modificar.
+        raise
+
+
 @contextmanager
 def conexion(**cambios):
     """Context manager: entrega la conexión y la cierra al salir (aunque haya error)."""
@@ -196,5 +237,7 @@ def imprimir(titulo, filas):
 # Solo se ejecuta al lanzar el archivo directamente (python py/conexion.py), no al importarlo.
 if __name__ == "__main__":
     # Abre la conexión, consulta versión del servidor, base actual y cuenta, y lo imprime.
-    with conexion() as con:
-        imprimir("Servidor", consultar(con, "SELECT VERSION() AS version, DATABASE() AS base_de_datos, CURRENT_USER() AS cuenta"))
+    def _servidor():
+        with conexion() as con:
+            imprimir("Servidor", consultar(con, "SELECT VERSION() AS version, DATABASE() AS base_de_datos, CURRENT_USER() AS cuenta"))
+    principal(_servidor)

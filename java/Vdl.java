@@ -51,6 +51,11 @@ public class Vdl {
 
     public static void main(String[] args) throws SQLException {
         Conexion.configurarSalida();
+        Conexion.correr(() -> principal(args));
+    }
+
+    /** Cuerpo del programa; main lo ejecuta con Conexion.correr() para explicar tablas dañadas. */
+    private static void principal(String[] args) throws SQLException {
         // Abre la conexión y la cierra automáticamente al terminar.
         try (Connection con = Conexion.conectar()) {
             // Con la opción --drop solo se eliminan las vistas y se termina.

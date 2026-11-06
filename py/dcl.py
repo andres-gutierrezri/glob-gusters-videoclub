@@ -19,7 +19,7 @@ Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
 import os
 
 # Funciones comunes de conexion.py (al importarlo también se carga el archivo .env).
-from conexion import conexion, consultar, ejecutar
+from conexion import conexion, consultar, ejecutar, principal
 
 # Base de datos sobre la que se conceden los permisos.
 BD = "glob_gusters"
@@ -30,7 +30,6 @@ USUARIOS = {
     # Cuenta de mostrador: puede consultar, insertar y actualizar (el DELETE se revoca abajo).
     "glob_gusters_mostrador": (os.getenv("GLOB_GUSTERS_PASS_MOSTRADOR", "Mostrador#2024"), "SELECT, INSERT, UPDATE"),
 }
-
 
 def main():
     # Requiere privilegios administrativos (root) para crear usuarios y conceder permisos.
@@ -59,4 +58,4 @@ def main():
 
 # Ejecuta main() solo al lanzar el archivo directamente.
 if __name__ == "__main__":
-    main()
+    principal(main)

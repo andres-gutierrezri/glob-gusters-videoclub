@@ -25,7 +25,7 @@ import sys
 import mariadb
 
 # Reutiliza los mismos parámetros de conexion.py (variables de entorno y archivo .env).
-from conexion import CONFIG  # mismos valores que conexion.py (variables de entorno y .env)
+from conexion import CONFIG, explicar_tabla_danada  # mismos valores que conexion.py (variables de entorno y .env)
 
 try:
     # Establecer la conexión con la base de datos (la contraseña vacía es válida)
@@ -48,16 +48,22 @@ except mariadb.Error as e:
     print(f"Error al conectar a MariaDB: {e}")
     sys.exit(1)
 
-# Crear un cursor para ejecutar sentencias SQL
-cursor = conexion.cursor()
+try:
+    # Crear un cursor para ejecutar sentencias SQL
+    cursor = conexion.cursor()
 
-# Ejecutar una consulta de ejemplo
-cursor.execute("SELECT * FROM nacionalidad")
+    # Ejecutar una consulta de ejemplo
+    cursor.execute("SELECT * FROM nacionalidad")
 
-# Recorrer los resultados
-# Cada fila es una tupla (id, nombre) que se desempaqueta en dos variables.
-for (Nacionalidad_ID, Nombre) in cursor:
-    print(f"ID: {Nacionalidad_ID}, Nombre: {Nombre}")
+    # Recorrer los resultados
+    # Cada fila es una tupla (id, nombre) que se desempaqueta en dos variables.
+    for (Nacionalidad_ID, Nombre) in cursor:
+        print(f"ID: {Nacionalidad_ID}, Nombre: {Nombre}")
+except mariadb.Error as e:
+    # Una tabla dañada en el servidor se explica con los pasos de reparación, sin traza.
+    explicar_tabla_danada(getattr(e, "errno", None), e)
+    # Cualquier otro error se propaga sin modificar.
+    raise
 
 # Cerrar cursor y conexión
 cursor.close()

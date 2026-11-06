@@ -14,7 +14,7 @@ Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
 """
 
 # Funciones comunes de conexion.py.
-from conexion import conexion, consultar, ejecutar, imprimir
+from conexion import conexion, consultar, ejecutar, imprimir, principal
 
 
 def main():
@@ -81,4 +81,4 @@ def main():
 
 # Ejecuta main() solo al lanzar el archivo directamente.
 if __name__ == "__main__":
-    main()
+    principal(main)
