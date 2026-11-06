@@ -473,10 +473,39 @@ python py/conexion.py
 > si `pip` no encuentra el Connector/C instalado con Homebrew, ejecuta antes
 > `export MARIADB_CONFIG=/opt/homebrew/opt/mariadb-connector-c/bin/mariadb_config`.
 
-Con el entorno activo, ejecuta los scripts en el mismo orden que los SQL (en Windows usa
-`\` en las rutas):
+Con el entorno activo y **desde la raíz del proyecto**, ejecuta los scripts en el mismo orden
+que los SQL. En Windows las rutas llevan `\`.
+
+**Windows (PowerShell):**
+
+```powershell
+python py\conexion.py             # comprueba la conexión
+python py\ddl.py                  # 01_DDL
+python py\dml.py                  # 02_DML
+python py\dql.py                  # 03_DQL  (o: python py\dql.py disponibles)
+python pydl.py                  # 04_VDL  (python pydl.py --drop elimina las vistas)
+python py\dcl.py                  # 05_DCL  (requiere una cuenta administrativa)
+python py	cl.py                  # 06_TCL
+python py\conexion_mariabd.py     # ejemplo con el conector oficial `mariadb`
+```
+
+**Windows (CMD):**
+
+```bat
+python py\conexion.py
+python py\ddl.py
+python py\dml.py
+python py\dql.py
+python pydl.py
+python py\dcl.py
+python py	cl.py
+python py\conexion_mariabd.py
+```
+
+**macOS y Linux:**
 
 ```bash
+python py/conexion.py
 python py/ddl.py                  # 01_DDL
 python py/dml.py                  # 02_DML
 python py/dql.py                  # 03_DQL  (o: python py/dql.py disponibles)
@@ -486,9 +515,12 @@ python py/tcl.py                  # 06_TCL
 python py/conexion_mariabd.py     # ejemplo con el conector oficial `mariadb`
 ```
 
+Para ejecutar solo uno, escribe únicamente su línea (por ejemplo, `python py\ddl.py`).
 Sin activar el entorno se puede llamar a su intérprete directamente:
-`.venv/bin/python py/ddl.py` (macOS/Linux) o `.venv\Scripts\python.exe py\ddl.py` (Windows).
-Para salir del entorno: `deactivate`.
+`.venv\Scripts\python.exe py\ddl.py` (Windows) o `.venv/bin/python py/ddl.py` (macOS/Linux).
+Para salir del entorno: `deactivate`. Si prefieres no escribirlos a mano,
+`shell\powershell\ejecutar-python.ps1` y `shell\cmd\ejecutar-python.cmd` crean el entorno, actualizan
+`pip`, instalan las dependencias y ejecutan todo en orden (ver «Scripts de shell»).
 
 ### 5. Java
 
