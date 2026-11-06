@@ -483,9 +483,9 @@ python py\conexion.py             # comprueba la conexión
 python py\ddl.py                  # 01_DDL
 python py\dml.py                  # 02_DML
 python py\dql.py                  # 03_DQL  (o: python py\dql.py disponibles)
-python pydl.py                  # 04_VDL  (python pydl.py --drop elimina las vistas)
+python py\vdl.py                  # 04_VDL  (python py\vdl.py --drop elimina las vistas)
 python py\dcl.py                  # 05_DCL  (requiere una cuenta administrativa)
-python py	cl.py                  # 06_TCL
+python py\tcl.py                  # 06_TCL
 python py\conexion_mariabd.py     # ejemplo con el conector oficial `mariadb`
 ```
 
@@ -496,9 +496,9 @@ python py\conexion.py
 python py\ddl.py
 python py\dml.py
 python py\dql.py
-python pydl.py
+python py\vdl.py
 python py\dcl.py
-python py	cl.py
+python py\tcl.py
 python py\conexion_mariabd.py
 ```
 
