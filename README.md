@@ -247,9 +247,9 @@ glob-gusters-videoclub/
 │   ├── Ddl.java / Dml.java / Dql.java   # Equivalentes en Java de 01_DDL, 02_DML y 03_DQL
 │   └── Vdl.java / Dcl.java / Tcl.java   # Equivalentes en Java de 04_VDL, 05_DCL y 06_TCL
 ├── shell/                               # Lanzadores que ejecutan SQL, Python y Java con un comando
-│   ├── bash/                            # Linux y macOS: lib.sh, ejecutar-sql/python/java/todo.sh
-│   ├── powershell/                      # Windows PowerShell: lib.ps1, ejecutar-sql/python/java/todo.ps1
-│   └── cmd/                             # Windows CMD: lib.cmd, ejecutar-sql/python/java/todo.cmd
+│   ├── bash/                            # Linux y macOS: lib.sh, configurar-utf8.sh, ejecutar-sql/python/java/todo.sh
+│   ├── powershell/                      # Windows PowerShell: lib.ps1, configurar-utf8.ps1, ejecutar-sql/python/java/todo.ps1
+│   └── cmd/                             # Windows CMD: lib.cmd, configurar-utf8.cmd, ejecutar-sql/python/java/todo.cmd
 ├── tests/
 │   └── mariadb/
 │       └── glob_gusters_test.sql        # Pruebas de integridad integral del proyecto
@@ -685,7 +685,7 @@ impriman igual en cualquier sistema.
 | Java | `Conexion.configurarSalida()` (llamada en la primera línea de cada `main`) fuerza UTF-8 en `System.out` y `System.err` cuando la salida no va a una terminal; los fuentes se compilan con `javac -encoding UTF-8`. | `java/Conexion.java` |
 | PowerShell | `lib.ps1` pone la consola y `$OutputEncoding` en UTF-8 (sin BOM) y `PYTHONIOENCODING=utf-8`; los `.ps1` se guardan con BOM para que Windows PowerShell 5.1 lea bien sus tildes. | `shell/powershell/lib.ps1` |
 | CMD | `lib.cmd` ejecuta `chcp 65001`. Los mensajes de los `.cmd` no llevan tildes a propósito (el intérprete de lotes las trata mal según la página de códigos); la salida de SQL, Python y Java sí sale con tildes. | `shell/cmd/lib.cmd` |
-| Bash | No necesita ajustes: `bash` pasa los bytes tal cual y la terminal de Linux/macOS ya es UTF-8. | `shell/bash/` |
+| Bash | Los lanzadores no necesitan ajustes: `bash` pasa los bytes tal cual y la terminal de Linux/macOS ya es UTF-8. Para la terminal interactiva está `configurar-utf8.sh`. | `shell/bash/` |
 
 Con los lanzadores de `shell/` y `sql/mariadb/check-mariadb.*` no hay que hacer nada. Si
 ejecutas los programas **a mano** en una consola de Windows, pon antes la consola en UTF-8
@@ -700,6 +700,20 @@ ejecutas los programas **a mano** en una consola de Windows, pon antes la consol
 :: Windows CMD
 chcp 65001
 ```
+
+Para no escribirlo cada vez, la carpeta `shell/` trae un script por intérprete que deja
+**la terminal actual** en UTF-8. Hay que cargarlo en esa terminal (con punto, `call` o
+`source`); si se ejecuta sin eso, el cambio vale solo para el proceso del script y se pierde.
+
+| Intérprete | Comando | Qué configura |
+|---|---|---|
+| PowerShell | `. .\shell\powershell\configurar-utf8.ps1` | Página de códigos 65001, `[Console]::OutputEncoding`/`InputEncoding`, `$OutputEncoding` y `PYTHONIOENCODING`. Con `-Persistente` agrega el bloque a `$PROFILE` (una sola vez) para todas las sesiones nuevas. |
+| CMD | `call shell\cmd\configurar-utf8.cmd` | `chcp 65001` y `PYTHONIOENCODING`. |
+| Bash | `source shell/bash/configurar-utf8.sh` | `LANG`/`LC_ALL` con un *locale* UTF-8 disponible (si ya lo es, no lo cambia) y `PYTHONIOENCODING`. |
+
+Cada uno imprime una línea de prueba (`áéíóú ñ Ñ ü ¿¡ €`). En CMD y PowerShell la ventana
+debe usar una fuente TrueType (Consolas, Cascadia Mono o Lucida Console). Para el cliente
+`mariadb` a mano añade además `--default-character-set=utf8mb4`.
 
 En macOS y Linux basta con una terminal y un *locale* UTF-8 (`echo $LANG` debe terminar en
 `UTF-8`; si no, `export LANG=es_ES.UTF-8` o `export LANG=C.UTF-8`). En Oracle APEX y
