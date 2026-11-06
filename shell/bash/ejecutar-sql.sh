@@ -43,7 +43,7 @@ done
 ok "Los ${#SQL_SCRIPTS[@]} scripts SQL terminaron sin errores."
 
 if [ "$PRUEBAS" -eq 1 ]; then
-    info "tests/mariadb/glob_gusters_test.sql (se esperan 4 líneas ERROR y 'PROYECTO OK')"
+    info "tests/mariadb/glob_gusters_test.sql (debe terminar con 'PROYECTO OK')"
     "$CLIENTE" -h "$HOST" -P "$PORT" -u "$USUARIO" --default-character-set=utf8mb4 --force "$BASE" \
         < tests/mariadb/glob_gusters_test.sql || { falla "Fallaron las pruebas."; exit 1; }
 fi

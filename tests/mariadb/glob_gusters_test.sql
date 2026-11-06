@@ -6,10 +6,11 @@
 -- quedó correctamente desplegado en MariaDB. No usa procedimientos almacenados (para
 -- funcionar incluso en instalaciones de XAMPP con la tabla de sistema mysql.proc
 -- desactualizada, un problema común al usar un mysqld más nuevo que la instalación
--- original). En su lugar, las pruebas que deben fallar se ejecutan como INSERT
--- individuales que MariaDB rechaza por trigger o CHECK; el script se ejecuta con la
--- bandera --force para poder seguir evaluando después de esos errores esperados, y
--- cada prueba negativa se verifica y se limpia con una consulta posterior.
+-- original). Las pruebas que deben fallar se ejecutan dentro de un bloque anónimo
+-- BEGIN NOT ATOMIC ... END (MariaDB 10.1.1+; no toca mysql.proc) con un manejador que
+-- captura el rechazo del trigger o del CHECK y guarda su mensaje en una variable de
+-- sesión: así el rechazo esperado NO imprime ninguna línea ERROR, y cada prueba verifica
+-- además que el mensaje sea el esperado (no solo que la fila no exista).
 --
 -- REQUISITOS:
 --   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP). No está
@@ -19,7 +20,7 @@
 --     operativo (Windows, macOS y Linux): README.md, secciones «Dependencias requeridas»
 --     y «Guía de ejecución por sistema operativo».
 --
--- CÓMO SE EJECUTA (obligatorio usar --force, ver motivo arriba):
+-- CÓMO SE EJECUTA (--force ya no es obligatorio; se conserva por si algo inesperado falla):
 --   Debe correrse DESPUÉS de haber ejecutado, en orden, los ocho scripts descritos en
 --   el README (glob_gusters.sql, glob_gusters_insert.sql y commands/01 a 06).
 --
@@ -135,21 +136,28 @@ WHERE c.`Cliente_ID` IS NULL;
 
 -- ---------------------------------------------------------------------------------
 -- PRUEBA 6: el trigger de auto-aval rechaza que un cliente sea avalado por sí mismo.
--- El INSERT siguiente debe fallar (se requiere ejecutar este script con --force para
--- que la conexión continúe después del error esperado).
+-- El INSERT siguiente debe ser rechazado por el trigger: el manejador captura el error
+-- esperado en @err_aval (sin imprimir ERROR) y la prueba comprueba su mensaje.
 -- ---------------------------------------------------------------------------------
 -- Limpieza previa por si una corrida anterior fue interrumpida antes de su propia
 -- limpieza y dejó este registro de prueba a medio insertar.
 DELETE FROM `cliente` WHERE `Cliente_ID` = 999001;
 
-INSERT INTO `cliente` (`Cliente_ID`, `Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
-VALUES (999001, 'TEST-AVAL-001', 'Cliente Prueba Aval', 'Dirección de prueba', '0000000000', 999001);
+SET @err_aval = NULL;
+DELIMITER $$
+BEGIN NOT ATOMIC
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION GET DIAGNOSTICS CONDITION 1 @err_aval = MESSAGE_TEXT;
+    INSERT INTO `cliente` (`Cliente_ID`, `Dni`, `Nombre`, `Direccion`, `Telefono`, `Aval_Cliente_ID`)
+    VALUES (999001, 'TEST-AVAL-001', 'Cliente Prueba Aval', 'Dirección de prueba', '0000000000', 999001);
+END$$
+DELIMITER ;
 
 INSERT INTO `test_results` (`Nombre_Prueba`, `Resultado`, `Detalle`)
 SELECT
     'Trigger: un cliente no puede ser su propio aval',
-    IF(COUNT(*) = 0, 'PASS', 'FAIL'),
-    IF(COUNT(*) = 0, 'El INSERT fue rechazado correctamente', 'El INSERT no fue rechazado')
+    IF(COUNT(*) = 0 AND @err_aval LIKE '%propio aval%', 'PASS', 'FAIL'),
+    IF(COUNT(*) = 0 AND @err_aval LIKE '%propio aval%', 'El INSERT fue rechazado correctamente',
+       CONCAT('El INSERT no fue rechazado por el trigger esperado. Mensaje: ', COALESCE(@err_aval, '(ninguno)')))
 FROM `cliente` WHERE `Cliente_ID` = 999001;
 
 -- Limpieza defensiva por si el trigger tuviera un error y el registro se llegó a crear.
@@ -186,14 +194,20 @@ SELECT @renta_max4, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1
 INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`)
 SELECT @renta_max4, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 3;
 -- El quinto préstamo activo para el mismo cliente debe ser rechazado por el trigger.
-INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`)
-SELECT @renta_max4, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 4;
+SET @err_max4 = NULL;
+DELIMITER $$
+BEGIN NOT ATOMIC
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION GET DIAGNOSTICS CONDITION 1 @err_max4 = MESSAGE_TEXT;
+    INSERT INTO `ejemplar_renta` (`Renta_ID`, `Ejemplar_ID`)
+    SELECT @renta_max4, `Ejemplar_ID` FROM `ejemplar` ORDER BY `Ejemplar_ID` LIMIT 1 OFFSET 4;
+END$$
+DELIMITER ;
 
 INSERT INTO `test_results` (`Nombre_Prueba`, `Resultado`, `Detalle`)
 SELECT
     'Trigger: máximo 4 ejemplares activos por socio',
-    IF(COUNT(*) = 4, 'PASS', 'FAIL'),
-    CONCAT('Ejemplares activos registrados: ', COUNT(*), ' (se esperaban 4)')
+    IF(COUNT(*) = 4 AND @err_max4 LIKE '%4 ejemplares%', 'PASS', 'FAIL'),
+    CONCAT('Ejemplares activos registrados: ', COUNT(*), ' (se esperaban 4). Rechazo: ', COALESCE(@err_max4, '(ninguno)'))
 FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4;
 
 -- Limpieza de los datos generados por esta prueba.
@@ -245,14 +259,21 @@ SELECT
 FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4b AND `Entrega` IS NOT NULL;
 
 -- Reabrir la devolución dejaría al socio con 5 sin devolver: debe ser rechazado.
-UPDATE `ejemplar_renta` SET `Entrega` = NULL
-WHERE `Renta_ID` = @renta_max4b AND `Entrega` IS NOT NULL;
+SET @err_reabrir = NULL;
+DELIMITER $$
+BEGIN NOT ATOMIC
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION GET DIAGNOSTICS CONDITION 1 @err_reabrir = MESSAGE_TEXT;
+    UPDATE `ejemplar_renta` SET `Entrega` = NULL
+    WHERE `Renta_ID` = @renta_max4b AND `Entrega` IS NOT NULL;
+END$$
+DELIMITER ;
 
 INSERT INTO `test_results` (`Nombre_Prueba`, `Resultado`, `Detalle`)
 SELECT
     'Trigger: no se puede reabrir una devolución con 4 ya sin devolver',
-    IF(COUNT(*) = 1, 'PASS', 'FAIL'),
-    IF(COUNT(*) = 1, 'El UPDATE fue rechazado correctamente', 'El UPDATE no fue rechazado')
+    IF(COUNT(*) = 1 AND @err_reabrir LIKE '%4 ejemplares%', 'PASS', 'FAIL'),
+    IF(COUNT(*) = 1 AND @err_reabrir LIKE '%4 ejemplares%', 'El UPDATE fue rechazado correctamente',
+       CONCAT('El UPDATE no fue rechazado por el trigger esperado. Mensaje: ', COALESCE(@err_reabrir, '(ninguno)')))
 FROM `ejemplar_renta` WHERE `Renta_ID` = @renta_max4b AND `Entrega` IS NOT NULL;
 
 -- Limpieza de los datos generados por estas pruebas.
@@ -268,14 +289,21 @@ DELETE FROM `cliente` WHERE `Cliente_ID` = @cliente_max4b;
 -- limpieza y dejó este registro de prueba a medio insertar.
 DELETE FROM `renta` WHERE `Inicia` = '2024-06-10' AND `Termina` = '2024-06-01';
 
-INSERT INTO `renta` (`Cliente_ID`, `Inicia`, `Termina`)
-SELECT `Cliente_ID`, '2024-06-10', '2024-06-01' FROM `cliente` ORDER BY `Cliente_ID` LIMIT 1;
+SET @err_check = NULL;
+DELIMITER $$
+BEGIN NOT ATOMIC
+    DECLARE CONTINUE HANDLER FOR SQLEXCEPTION GET DIAGNOSTICS CONDITION 1 @err_check = MESSAGE_TEXT;
+    INSERT INTO `renta` (`Cliente_ID`, `Inicia`, `Termina`)
+    SELECT `Cliente_ID`, '2024-06-10', '2024-06-01' FROM `cliente` ORDER BY `Cliente_ID` LIMIT 1;
+END$$
+DELIMITER ;
 
 INSERT INTO `test_results` (`Nombre_Prueba`, `Resultado`, `Detalle`)
 SELECT
     'CHECK: Termina no puede ser anterior a Inicia',
-    IF(COUNT(*) = 0, 'PASS', 'FAIL'),
-    IF(COUNT(*) = 0, 'El INSERT fue rechazado correctamente', 'El INSERT no fue rechazado')
+    IF(COUNT(*) = 0 AND @err_check LIKE '%chk_renta_fechas%', 'PASS', 'FAIL'),
+    IF(COUNT(*) = 0 AND @err_check LIKE '%chk_renta_fechas%', 'El INSERT fue rechazado correctamente',
+       CONCAT('El INSERT no fue rechazado por el CHECK esperado. Mensaje: ', COALESCE(@err_check, '(ninguno)')))
 FROM `renta` WHERE `Inicia` = '2024-06-10' AND `Termina` = '2024-06-01';
 
 -- Limpieza defensiva por si el CHECK tuviera un error y el registro se llegó a crear.

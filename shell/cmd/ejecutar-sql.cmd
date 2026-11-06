@@ -41,7 +41,7 @@ for %%f in (sql\mariadb\glob_gusters.sql sql\mariadb\glob_gusters_insert.sql sql
 echo [OK] Los 8 scripts SQL terminaron sin errores.
 
 if "%PRUEBAS%"=="1" (
-    echo ^>^>^> tests\mariadb\glob_gusters_test.sql ^(se esperan 4 lineas ERROR y "PROYECTO OK"^)
+    echo ^>^>^> tests\mariadb\glob_gusters_test.sql ^(debe terminar con "PROYECTO OK"^)
     "%CLIENTE%" -h %DB_HOST% -P %DB_PORT% -u %DB_USER% --default-character-set=utf8mb4 --force %DB_NAME% < tests\mariadb\glob_gusters_test.sql
     if errorlevel 1 (
         echo [ERROR] Fallaron las pruebas.
