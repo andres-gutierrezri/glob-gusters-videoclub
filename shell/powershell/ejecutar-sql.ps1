@@ -37,7 +37,7 @@ foreach ($f in $script:SqlScripts) {
 Ok "Los $($script:SqlScripts.Count) scripts SQL terminaron sin errores."
 
 if (-not $SinPruebas) {
-    Info "tests/mariadb/glob_gusters_test.sql (se esperan 3 líneas ERROR y 'PROYECTO OK')"
+    Info "tests/mariadb/glob_gusters_test.sql (se esperan 4 líneas ERROR y 'PROYECTO OK')"
     & $script:Cliente @conexion --force $script:Base -e 'source tests/mariadb/glob_gusters_test.sql'
     if ($LASTEXITCODE -ne 0) { Falla 'Fallaron las pruebas.'; exit 1 }
 }

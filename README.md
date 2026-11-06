@@ -223,6 +223,8 @@ glob-gusters-videoclub/
 │   │   ├── glob_gusters_insert.sql      # DML: datos de prueba para todas las tablas
 │   │   ├── check-mariadb.sql            # Script de diagnóstico del servidor MariaDB
 │   │   ├── check-mariadb.sh             # Lanzador: ejecuta el diagnóstico con la configuración del .env
+│   │   ├── check-mariadb.ps1            # Lanzador equivalente para Windows PowerShell
+│   │   ├── check-mariadb.cmd            # Lanzador equivalente para Windows CMD
 │   │   └── commands/
 │   │       ├── 01_DDL.sql               # CREATE / ALTER / DROP de ejemplo
 │   │       ├── 02_DML.sql               # INSERT / UPDATE / DELETE de ejemplo
@@ -407,6 +409,10 @@ Es de solo lectura y se ejecuta con `--force`. Dos formas:
 | macOS / Linux | `sh sql/mariadb/check-mariadb.sh` | `"$MARIADB" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force < sql/mariadb/check-mariadb.sql` |
 | Windows | En **Git Bash**: `bash sql/mariadb/check-mariadb.sh` (si el cliente no está en el `PATH`, antes: `export MARIADB_BIN=/c/xampp/mysql/bin/mariadb.exe`) | `& $MARIADB -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force -e "source sql/mariadb/check-mariadb.sql"` |
 
+En Windows también existen `sql\mariadb\check-mariadb.ps1` (PowerShell, con
+`powershell -ExecutionPolicy Bypass -File sql\mariadb\check-mariadb.ps1`) y
+`sql\mariadb\check-mariadb.cmd` (CMD), que leen el `.env` sin necesitar Git Bash.
+
 Para usar otra base desde la forma directa, agrega
 `--init-command="SET @glob_gusters_db = 'mi_base'"`. En Windows el lanzador `.sh` necesita
 Git Bash; la forma directa funciona en PowerShell sin nada más.
@@ -568,12 +574,12 @@ REM Diagnóstico del servidor (solo lectura; usa la base glob_gusters)
 
 REM Con otra base: agrega --init-command="SET @glob_gusters_db = 'mi_base'"
 
-REM Pruebas de integridad (después de los 8 scripts; esperan 3 líneas ERROR y "PROYECTO OK")
+REM Pruebas de integridad (después de los 8 scripts; esperan 4 líneas ERROR y "PROYECTO OK")
 "%MARIADB%" -u root -h 127.0.0.1 -P 3306 --default-character-set=utf8mb4 --force glob_gusters < tests\mariadb\glob_gusters_test.sql
 ```
 
 El lanzador `sql\mariadb\check-mariadb.sh` no se puede usar en CMD (es un script `sh`); en
-su lugar se usa el comando anterior, o **Git Bash** si quieres que lea el `.env`.
+su lugar usa `sql\mariadb\check-mariadb.cmd`, que lee el `.env` igual que el `.sh`.
 
 #### 6.3 Python
 
@@ -1329,7 +1335,10 @@ fijos. Tablas con `UNIQUE` usan `INSERT IGNORE`; `director`, `actor`, `renta` y
 
 #### `check-mariadb.sql` — diagnóstico del servidor (solo lectura)
 
-Todo son `SELECT`/`SHOW`: no modifica nada. Se ejecuta con `--force` porque algunas
+Todo son `SELECT`/`SHOW`: no modifica nada. Por defecto solo imprime la verificación de
+la conexión y sus parámetros (versión, host, puerto, cuenta, base seleccionada, id de
+conexión y juego de caracteres de la sesión); el diagnóstico completo sigue en el archivo,
+comentado con `/* ... */`, y se reactiva quitando esos marcadores. Se ejecuta con `--force` porque algunas
 secciones pueden fallar por limitaciones del entorno (descritas en su encabezado: base
 inexistente, `event_scheduler` apagado y `mysql.proc` desactualizada).
 
