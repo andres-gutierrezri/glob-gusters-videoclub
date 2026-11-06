@@ -7,6 +7,16 @@
 -- parte final, los objetos y datos específicos de la base de datos del proyecto
 -- (`glob_gusters` por defecto; configurable con GLOB_GUSTERS_DB, ver más abajo).
 --
+-- SALIDA REDUCIDA (verificación de la conexión):
+--   Por defecto solo se imprimen la verificación de la conexión y sus parámetros:
+--   versión, host y puerto del servidor, cuenta autenticada, base seleccionada, id de
+--   conexión y juego de caracteres/collation de la sesión. El resto del diagnóstico
+--   (procesos, estado, configuración, motores, usuarios, objetos del proyecto y
+--   rutinas) sigue en este archivo, dentro de un bloque de comentario /* ... */ al
+--   final del script. Para volver a activarlo, borra la línea que abre el bloque
+--   («/*» antes de «Procesos y conexiones activas») y la que lo cierra («*/» al final).
+--   Las notas «LIMITACIONES CONOCIDAS» de más abajo aplican solo a ese diagnóstico.
+--
 -- REQUISITOS:
 --   * Servidor MariaDB 10.2.1 o superior (verificado con 10.4.28, el de XAMPP) y cliente
 --     `mariadb` (o `mysql`) en la terminal. Instalación y comandos por sistema operativo
@@ -89,6 +99,21 @@ SELECT CURRENT_USER();
 -- USE todavía, que es la situación normal la primera vez que se corre este script).
 SELECT DATABASE();
 
+-- Verificación de la conexión: si esta fila aparece, el cliente se conectó y el
+-- servidor respondió. Muestra el id de la conexión y los parámetros de la sesión
+-- (juego de caracteres del cliente y de la conexión, y collation de la conexión).
+SELECT
+    'Conexión OK' AS Estado,
+    CONNECTION_ID() AS Id_Conexion,
+    @@character_set_client AS Charset_Cliente,
+    @@character_set_connection AS Charset_Conexion,
+    @@collation_connection AS Collation_Conexion;
+
+-- =====================================================================================
+-- DIAGNÓSTICO COMPLETO DESACTIVADO (comentado): lo que sigue ya no se ejecuta. Se
+-- conserva íntegro; ver «SALIDA REDUCIDA» en la cabecera para volver a activarlo.
+-- =====================================================================================
+/*
 -- Procesos y conexiones activas en el servidor en este momento.
 SHOW PROCESSLIST;
 
@@ -224,3 +249,4 @@ SHOW FUNCTION STATUS;
 
 -- Detalle crudo de rutinas (procedimientos y funciones) vía information_schema.
 SELECT * FROM information_schema.routines LIMIT 10;
+*/
