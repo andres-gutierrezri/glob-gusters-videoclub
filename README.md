@@ -300,7 +300,7 @@ independiente: para usar solo SQL basta MariaDB y su cliente; Python y Java son 
 | `mariadb` (paquete de pip) | `>=1.1` (`requirements.txt`) | Conector oficial; solo lo usa `py/conexion_mariabd.py`. | Solo ese ejemplo |
 | MariaDB Connector/C | **3.3.1 o superior** (librería del sistema, no es un paquete de pip) | Lo necesita el paquete `mariadb` para instalarse. El de XAMPP (3.1.x) es demasiado antiguo. | Solo `mariadb` |
 | **JDK** | **17 o superior** (probado con 26) | Compila y ejecuta `java/` (usa *text blocks* y `record`). | Java |
-| MariaDB Connector/J | **3.5.3** o superior de la serie 3.x (`java/lib/mariadb-java-client-<versión>.jar`, no se versiona; los lanzadores `ejecutar-java` lo actualizan solo; la 3.5.11 probada con las 25 pruebas y Java) | Driver JDBC. | Java |
+| MariaDB Connector/J | **3.5.3** o superior de la serie 3.x (`java/lib/mariadb-java-client-<versión>.jar`, no se versiona; los lanzadores `ejecutar-java` lo actualizan solo; la 3.5.11 se probó con los 7 programas de `java/`) | Driver JDBC. | Java |
 | Git Bash (solo Windows) | Cualquiera reciente | Ejecutar `sql/mariadb/check-mariadb.sh`. | Solo ese lanzador |
 | Oracle Database / APEX | 12c o superior | Scripts de `sql/oracle_apex/`. | Solo la versión Oracle |
 
