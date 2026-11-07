@@ -15,8 +15,8 @@ sudo apt install libmariadb-dev build-essential python3-dev; Windows: instalador
 mariadb.com/downloads/connectors si pip intenta compilar). Detalle por sistema operativo:
 README.md, sección «Dependencias requeridas».
 
-Uso (en Windows se escribe igual):
-    python py/conexion_mariabd.py
+Uso (con el entorno virtual instalado y ACTIVADO; macOS y Linux usan python3, Windows: python py/conexion_mariabd.py):
+    python3 py/conexion_mariabd.py
 """
 
 # `sys` permite terminar el programa con un código de error (sys.exit).

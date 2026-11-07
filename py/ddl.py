@@ -7,8 +7,8 @@ Requisitos: Python 3.9+, el paquete PyMySQL (`pip install -r requirements.txt` d
 entorno virtual .venv), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters ya
 creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
 «Dependencias requeridas» y «Guía de ejecución por sistema operativo».
-Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
-    python py/ddl.py          (en Windows se escribe igual)
+Ejecución, con el entorno virtual instalado y ACTIVADO y desde la raíz del proyecto:
+    python3 py/ddl.py          (macOS y Linux; en Windows: python py/ddl.py)
 """
 
 # Funciones comunes de conexion.py: context manager de conexión, SELECT, escritura e impresión.
@@ -72,6 +72,6 @@ def main():
         )
 
 
-# Ejecuta main() solo cuando el archivo se lanza directamente (python py/ddl.py).
+# Ejecuta main() solo cuando el archivo se lanza directamente (python3 py/ddl.py).
 if __name__ == "__main__":
     principal(main)

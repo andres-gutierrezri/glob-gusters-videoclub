@@ -11,8 +11,8 @@ Requisitos: Python 3.9+, el paquete PyMySQL (`pip install -r requirements.txt` d
 entorno virtual .venv), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters ya
 creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
 «Dependencias requeridas» y «Guía de ejecución por sistema operativo».
-Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
-    python py/dcl.py          (en Windows se escribe igual)
+Ejecución, con el entorno virtual instalado y ACTIVADO y desde la raíz del proyecto:
+    python3 py/dcl.py          (macOS y Linux; en Windows: python py/dcl.py)
 """
 
 # Módulo estándar para leer variables de entorno.

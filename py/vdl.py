@@ -2,14 +2,14 @@
 
 CREATE OR REPLACE VIEW de las dos vistas del proyecto y consulta de cada una.
 El DROP VIEW queda detrás de la opción --drop, igual que está comentado en el .sql:
-    python py/vdl.py --drop
+    python3 py/vdl.py --drop        (macOS/Linux; en Windows: python py/vdl.py --drop)
 
 Requisitos: Python 3.9+, el paquete PyMySQL (`pip install -r requirements.txt` dentro del
 entorno virtual .venv), un servidor MariaDB 10.2.1+ en marcha y la base glob_gusters ya
 creada. Instalación y comandos para Windows, macOS y Linux: README.md, secciones
 «Dependencias requeridas» y «Guía de ejecución por sistema operativo».
-Ejecución, con el entorno virtual activo y desde la raíz del proyecto:
-    python py/vdl.py          (en Windows se escribe igual)
+Ejecución, con el entorno virtual instalado y ACTIVADO y desde la raíz del proyecto:
+    python3 py/vdl.py          (macOS y Linux; en Windows: python py/vdl.py)
 """
 
 # `sys` da acceso a los argumentos de la línea de comandos.

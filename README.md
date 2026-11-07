@@ -464,7 +464,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env                # una sola vez; edita GLOB_GUSTERS_PASSWORD si tu root tiene clave
-python py/conexion.py
+python3 py/conexion.py
 ```
 
 > `requirements.txt` incluye `mariadb`, que necesita MariaDB Connector/C ≥ 3.3.1 instalado
@@ -472,6 +472,14 @@ python py/conexion.py
 > línea antes de instalar: todo `py/` funciona igual salvo `conexion_mariabd.py`. En macOS,
 > si `pip` no encuentra el Connector/C instalado con Homebrew, ejecuta antes
 > `export MARIADB_CONFIG=/opt/homebrew/opt/mariadb-connector-c/bin/mariadb_config`.
+
+> **Requisito previo (obligatorio):** antes de ejecutar cualquier script de Python, el entorno
+> virtual `.venv` debe estar **instalado y activado**. Si no existe, créalo con
+> `python3 -m venv .venv`; actívalo con `source .venv/bin/activate` (macOS y Linux),
+> `.venv\Scripts\Activate.ps1` (PowerShell) o `.venv\Scripts\activate.bat` (CMD), e instala
+> las dependencias con `pip install -r requirements.txt`. El indicador `(.venv)` en la
+> terminal confirma que está activo. En **macOS y Linux los scripts se ejecutan con el
+> comando `python3`** (no `python`); en Windows se usa `python`.
 
 Con el entorno activo y **desde la raíz del proyecto**, ejecuta los scripts en el mismo orden
 que los SQL. En Windows las rutas llevan `\`.
@@ -505,19 +513,19 @@ python py\conexion_mariabd.py
 **macOS y Linux:**
 
 ```bash
-python py/conexion.py
-python py/ddl.py                  # 01_DDL
-python py/dml.py                  # 02_DML
-python py/dql.py                  # 03_DQL  (o: python py/dql.py disponibles)
-python py/vdl.py                  # 04_VDL  (python py/vdl.py --drop elimina las vistas)
-python py/dcl.py                  # 05_DCL  (requiere una cuenta administrativa)
-python py/tcl.py                  # 06_TCL
-python py/conexion_mariabd.py     # ejemplo con el conector oficial `mariadb`
+python3 py/conexion.py
+python3 py/ddl.py                  # 01_DDL
+python3 py/dml.py                  # 02_DML
+python3 py/dql.py                  # 03_DQL  (o: python3 py/dql.py disponibles)
+python3 py/vdl.py                  # 04_VDL  (python3 py/vdl.py --drop elimina las vistas)
+python3 py/dcl.py                  # 05_DCL  (requiere una cuenta administrativa)
+python3 py/tcl.py                  # 06_TCL
+python3 py/conexion_mariabd.py     # ejemplo con el conector oficial `mariadb`
 ```
 
-Para ejecutar solo uno, escribe únicamente su línea (por ejemplo, `python py\ddl.py`).
+Para ejecutar solo uno, escribe únicamente su línea (por ejemplo, `python py\ddl.py` en Windows o `python3 py/ddl.py` en macOS y Linux).
 Sin activar el entorno se puede llamar a su intérprete directamente:
-`.venv\Scripts\python.exe py\ddl.py` (Windows) o `.venv/bin/python py/ddl.py` (macOS/Linux).
+`.venv\Scripts\python.exe py\ddl.py` (Windows) o `.venv/bin/python3 py/ddl.py` (macOS/Linux).
 Para salir del entorno: `deactivate`. Si prefieres no escribirlos a mano,
 `shell\powershell\ejecutar-python.ps1` y `shell\cmd\ejecutar-python.cmd` crean el entorno, actualizan
 `pip`, instalan las dependencias y ejecutan todo en orden (ver «Scripts de shell»).
@@ -1263,7 +1271,7 @@ creada (pasos 1 a 3 de la sección anterior).
 python3 -m venv .venv                # crea el entorno virtual (una sola vez; .venv/ no se versiona)
 source .venv/bin/activate            # Windows PowerShell: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python py/conexion.py      # prueba de conexión: versión, base y cuenta
+python3 py/conexion.py     # prueba de conexión: versión, base y cuenta (en Windows: python)
 ```
 
 Los valores por defecto son los de XAMPP (`localhost`, `3306`, `root` sin contraseña,
@@ -1276,7 +1284,7 @@ base `glob_gusters`). Se pueden cambiar sin editar el código con las variables 
 |---|---|---|
 | `py/ddl.py` | `01_DDL.sql` | CREATE / ALTER / CREATE INDEX / DROP con `IF [NOT] EXISTS`. |
 | `py/dml.py` | `02_DML.sql` | INSERT / UPDATE / DELETE con parámetros y llaves naturales. |
-| `py/dql.py` | `03_DQL.sql` | SELECT, JOIN y GROUP BY; `python py/dql.py <nombre>` ejecuta una sola consulta. |
+| `py/dql.py` | `03_DQL.sql` | SELECT, JOIN y GROUP BY; `python3 py/dql.py <nombre>` (macOS/Linux; en Windows `python`) ejecuta una sola consulta. |
 | `py/vdl.py` | `04_VDL.sql` | Crea y consulta las dos vistas; `--drop` las elimina. |
 | `py/dcl.py` | `05_DCL.sql` | CREATE USER / GRANT / REVOKE / SHOW GRANTS (requiere cuenta administrativa). |
 | `py/tcl.py` | `06_TCL.sql` | Transacción con SAVEPOINT y COMMIT, y otra descartada con ROLLBACK. |
@@ -1578,8 +1586,8 @@ Equivalentes Oracle de los scripts `01` a `06`.
 ### Carpeta `py/`
 
 Todos los scripts usan PyMySQL a través de `conexion.py`, con consultas parametrizadas
-(`%s`). Se ejecutan desde la raíz con el entorno virtual activo, por ejemplo
-`python py/ddl.py`.
+(`%s`). Se ejecutan desde la raíz con el entorno virtual instalado y activado, por ejemplo
+`python3 py/ddl.py` en macOS y Linux (`python py\ddl.py` en Windows).
 
 #### `conexion.py` — módulo base
 

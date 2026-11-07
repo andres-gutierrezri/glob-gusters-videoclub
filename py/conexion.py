@@ -19,8 +19,8 @@ entorno virtual .venv) y un servidor MariaDB 10.2.1+ en marcha. Instalación y c
 Windows, macOS y Linux: README.md, secciones «Dependencias requeridas» y «Guía de
 ejecución por sistema operativo».
 
-Prueba rápida de la conexión:
-    python py/conexion.py
+Prueba rápida de la conexión (con el entorno virtual instalado y ACTIVADO; en Windows: python py/conexion.py):
+    python3 py/conexion.py
 """
 
 # Módulo estándar para leer variables de entorno (os.getenv) y escribirlas (os.environ).
@@ -234,7 +234,7 @@ def imprimir(titulo, filas):
         print(" | ".join(str(fila[c]).ljust(anchos[c]) for c in columnas))
 
 
-# Solo se ejecuta al lanzar el archivo directamente (python py/conexion.py), no al importarlo.
+# Solo se ejecuta al lanzar el archivo directamente (python3 py/conexion.py), no al importarlo.
 if __name__ == "__main__":
     # Abre la conexión, consulta versión del servidor, base actual y cuenta, y lo imprime.
     def _servidor():
