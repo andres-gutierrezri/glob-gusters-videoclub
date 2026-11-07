@@ -819,11 +819,22 @@ Python y los de Java. Hay una versión por sistema operativo y cada una hace lo 
 
 | Lanzador | Qué ejecuta |
 |---|---|
-| `ejecutar-sql` | Primero muestra la versión del cliente y del servidor y avisa si el servidor es anterior a MariaDB 10.2.1 (no instala nada; sin conexión avisa y sigue). Luego los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Se detiene en el primer error de los 8 scripts. |
+| `ejecutar-sql` | Primero muestra la versión del cliente y del servidor y avisa si el servidor es anterior a MariaDB 10.2.1 (no instala nada; sin conexión avisa y sigue). Luego los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Si falla la creación de la base (los 2 primeros scripts: tablas e inserción de datos), muestra el error y detiene SQL, Python y Java; si falla cualquiera de los otros 6, muestra el error y detiene el programa. Las pruebas deben terminar con «PROYECTO OK»; si no, también se detiene. |
 | `ejecutar-python` | Primero verifica que exista el entorno virtual `.venv` y lo confirma en pantalla; si falta, lo crea y confirma la creación. Si no se puede crear, muestra un aviso y se detiene (no instala ni ejecuta nada de Python). Después actualiza `pip` (si no hay Internet avisa y sigue), instala `requirements.txt`, muestra la lista de dependencias instaladas con sus versiones y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
 | `ejecutar-java` | Primero actualiza el driver JDBC: consulta en Maven Central la última versión **3.x** de MariaDB Connector/J y, si `java/lib/` no la tiene, la descarga y borra las anteriores (sin Internet usa el que haya; si no hay ninguno, baja la 3.5.3). Solo avanza dentro de la serie 3.x: la 4.x exige TLS y no conecta con el MariaDB de XAMPP sin configurarlo. Al descargar muestra «Driver JDBC descargado correctamente» y, antes de compilar, verifica que haya un `.jar` válido en `java/lib/` («Driver JDBC verificado»); si no lo hay, muestra un error y se detiene sin ejecutar nada de Java. Luego compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
 | `ejecutar-todo` | Los tres anteriores, en ese orden. Se detiene en el primer fallo de SQL o de Java. Si falla **Python** (por ejemplo, no se pudo crear `.venv`), muestra un aviso, **continúa con Java** y al final indica «Proyecto ejecutado con advertencias»; en ese caso termina con código 0. |
 | `lib` | Funciones comunes (no se ejecuta directamente): lee el `.env`, localiza el cliente `mariadb` y define el orden de los scripts SQL. |
+
+**Qué pasa si algo falla.** Todos los lanzadores muestran el error en la terminal y se detienen así:
+
+| Falla | Resultado |
+|---|---|
+| Creación de la base (`glob_gusters.sql`, tablas, o `glob_gusters_insert.sql`, datos) | Error y mensaje «Se detiene la ejecución de los demás scripts SQL, de Python y de Java». `ejecutar-todo` termina con error. |
+| Cualquiera de los otros 6 scripts SQL (`01_DDL` a `06_TCL`) | Error y «Se detiene la ejecución del programa». |
+| Pruebas (`glob_gusters_test.sql`) | Se exige el veredicto «PROYECTO OK»; si no aparece, error y detención. |
+| Diagnóstico (`check-mariadb`) | Solo un aviso (se ejecuta con `--force` y es informativo); no detiene nada. |
+| Entorno virtual de Python o sus scripts | Aviso; `ejecutar-todo` continúa con Java y cierra con «Proyecto ejecutado con advertencias». |
+| Driver JDBC ausente o no descargado | Error y se detienen los scripts de Java. |
 
 ### Antes de empezar
 
@@ -951,6 +962,7 @@ habitual). Es un registro de lo comprobado, no una garantía para otros equipos.
 | Actualización del driver en `ejecutar-java` (`.ps1`, `.cmd` y el paso del driver en `.sh`) | Pasan de la 3.5.3 a la **3.5.11** (la última 3.x), borran la anterior y repiten «al día»; sin Internet usan el driver existente. Con la 3.5.11, las 7 clases de Java terminan con código 0. La **4.0.0 se descartó**: todas las clases fallan con «ssl not enabled in the server» porque exige TLS y el MariaDB de XAMPP no lo tiene. |
 | Comprobación de versiones en `ejecutar-sql` (`.sh`, `.ps1`, `.cmd`) | Muestran el cliente (10.4.32) y el servidor (10.4.32) y avisan sin conexión; la lógica del mínimo 10.2.1 se probó con versiones simuladas. En PowerShell, además, las 25 pruebas y el diagnóstico terminan bien. |
 | Verificación del entorno virtual y de la descarga del driver (solo `.sh`, macOS con MariaDB 10.4.28, 2026-11-07) | Sin `.venv` lo crea, lo confirma y lista `mariadb 1.1.14`, `PyMySQL 1.2.3` y `pip 26.3`; con `.venv` existente lo indica y sigue. Con un Python inválido, `ejecutar-todo` avisa, continúa con Java y cierra con «Proyecto ejecutado con advertencias». Sin `java/lib/` descarga el driver y lo verifica; sin driver y sin Internet muestra el error y no compila. Las versiones `.ps1` y `.cmd` aplican la misma lógica, pero **no se ejecutaron** tras este cambio. |
+| Detención ante fallos de SQL (solo `.sh`, macOS con MariaDB 10.4.28, 2026-11-07) | Con credenciales inválidas falla `glob_gusters.sql`, muestra el error de creación de la base y no se ejecuta Python ni Java. Con una consulta errónea añadida a `03_DQL.sql` muestra el error del cliente y se detiene. Con el veredicto de las pruebas alterado a «REVISAR» se detiene con «Fallaron las pruebas». Los archivos se restauraron tras cada prueba. Las versiones `.ps1` y `.cmd` aplican la misma lógica, pero **no se ejecutaron** tras este cambio. |
 | Tabla dañada (error 1030 de Aria) en `py/` y `java/` | Se **simuló** el error: Python y Java imprimen los pasos de reparación y terminan con error; otros códigos se propagan. No se dañó una tabla real. |
 | `configurar-utf8` (`.ps1`, `.cmd`, `.sh`) | Dejan la sesión en UTF-8 (página 65001, `PYTHONIOENCODING`, `LANG`) y imprimen la línea de prueba con tildes y `ñ`; `-Persistente` no se ejecutó para no tocar el perfil. |
 
