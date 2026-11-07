@@ -29,9 +29,17 @@ fi
 "$PYTHON" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' \
     || { falla "Se requiere Python 3.9 o superior."; exit 1; }
 
-if [ ! -x .venv/bin/python ]; then
-    info "Creando el entorno virtual .venv"
-    "$PYTHON" -m venv .venv || { falla "No se pudo crear .venv (en Debian/Ubuntu: sudo apt install python3-venv)."; exit 1; }
+info "Verificando el entorno virtual .venv"
+if [ -x .venv/bin/python ]; then
+    ok "El entorno virtual .venv ya existe."
+else
+    info "El entorno virtual .venv no existe; creándolo"
+    if ! "$PYTHON" -m venv .venv || [ ! -x .venv/bin/python ]; then
+        aviso "No se pudo crear el entorno virtual .venv (en Debian/Ubuntu: sudo apt install python3-venv). Se detiene la ejecución."
+        falla "Sin entorno virtual no se instalan las dependencias ni se ejecutan los scripts de Python."
+        exit 1
+    fi
+    ok "Entorno virtual .venv creado correctamente."
 fi
 VPY=.venv/bin/python
 
@@ -46,6 +54,9 @@ if ! "$VPY" -m pip install --quiet -r requirements.txt; then
     "$VPY" -m pip install --quiet "PyMySQL>=1.1" || { falla "Falló la instalación de PyMySQL."; exit 1; }
     MARIADB_PKG=0
 fi
+
+info "Dependencias de Python instaladas en .venv (paquete y versión)"
+"$VPY" -m pip list --format=columns || aviso "No se pudo listar las dependencias instaladas."
 
 for m in conexion ddl dml dql vdl dcl tcl conexion_mariabd; do
     if [ "$m" = "conexion_mariabd" ] && [ "$MARIADB_PKG" -eq 0 ]; then

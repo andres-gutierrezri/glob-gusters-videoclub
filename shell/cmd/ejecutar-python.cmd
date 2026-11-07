@@ -21,7 +21,12 @@ if not exist ".env" (
 )
 
 set "VPY=.venv\Scripts\python.exe"
-if exist "%VPY%" goto :dependencias
+echo ^>^>^> Verificando el entorno virtual .venv
+if exist "%VPY%" (
+    echo [OK] El entorno virtual .venv ya existe.
+    goto :dependencias
+)
+echo ^>^>^> El entorno virtual .venv no existe; creandolo
 
 rem Busca un Python 3.9+ real (ignora el alias vacio de la Tienda de Windows).
 set "PY="
@@ -33,10 +38,15 @@ if not defined PY (
 )
 echo ^>^>^> Creando el entorno virtual .venv
 "%PY%" -m venv .venv
-if errorlevel 1 (
-    echo [ERROR] No se pudo crear .venv.
-    exit /b 1
-)
+if errorlevel 1 goto :venv_falla
+if not exist "%VPY%" goto :venv_falla
+echo [OK] Entorno virtual .venv creado correctamente.
+goto :dependencias
+
+:venv_falla
+echo [AVISO] No se pudo crear el entorno virtual .venv. Se detiene la ejecucion.
+echo [ERROR] Sin entorno virtual no se instalan las dependencias ni se ejecutan los scripts de Python.
+exit /b 1
 
 :dependencias
 echo ^>^>^> Actualizando pip
@@ -55,6 +65,10 @@ if errorlevel 1 (
     )
     set "CON_MARIADB=0"
 )
+
+echo ^>^>^> Dependencias de Python instaladas en .venv ^(paquete y version^)
+"%VPY%" -m pip list --format=columns
+if errorlevel 1 echo [AVISO] No se pudo listar las dependencias instaladas.
 
 set "PYTHONIOENCODING=utf-8"
 for %%m in (conexion ddl dml dql vdl dcl tcl conexion_mariabd) do (

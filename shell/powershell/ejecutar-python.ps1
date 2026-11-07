@@ -16,7 +16,11 @@ Set-Location $script:Raiz
 Asegurar-Env
 
 $venvPy = Join-Path $script:Raiz '.venv\Scripts\python.exe'
-if (-not (Test-Path $venvPy)) {
+Info 'Verificando el entorno virtual .venv'
+if (Test-Path $venvPy) {
+    Ok 'El entorno virtual .venv ya existe.'
+} else {
+    Info 'El entorno virtual .venv no existe; creándolo'
     # Busca un Python 3.9+ real (ignora el alias vacío de la Tienda de Windows).
     $python = $null
     foreach ($c in @($env:PYTHON_BIN, 'py', 'python', 'python3')) {
@@ -28,7 +32,12 @@ if (-not (Test-Path $venvPy)) {
     if (-not $python) { Falla 'No se encontró Python 3.9+. Instálalo (winget install Python.Python.3.13) o define PYTHON_BIN.'; exit 1 }
     Info 'Creando el entorno virtual .venv'
     & $python -m venv .venv
-    if ($LASTEXITCODE -ne 0) { Falla 'No se pudo crear .venv.'; exit 1 }
+    if (($LASTEXITCODE -ne 0) -or -not (Test-Path $venvPy)) {
+        Aviso 'No se pudo crear el entorno virtual .venv. Se detiene la ejecución.'
+        Falla 'Sin entorno virtual no se instalan las dependencias ni se ejecutan los scripts de Python.'
+        exit 1
+    }
+    Ok 'Entorno virtual .venv creado correctamente.'
 }
 
 Info 'Actualizando pip'
@@ -44,6 +53,10 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { Falla 'Falló la instalación de PyMySQL.'; exit 1 }
     $conMariadb = $false
 }
+
+Info 'Dependencias de Python instaladas en .venv (paquete y versión)'
+& $venvPy -m pip list --format=columns
+if ($LASTEXITCODE -ne 0) { Aviso 'No se pudo listar las dependencias instaladas.' }
 
 # Fuerza UTF-8 en la salida de Python para que tildes y ñ se vean bien.
 $env:PYTHONIOENCODING = 'utf-8'
