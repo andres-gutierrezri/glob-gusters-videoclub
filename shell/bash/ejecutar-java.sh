@@ -57,6 +57,7 @@ if [ -n "$ULTIMA" ]; then
         info "Descargando $JAR"
         if leer_url "$MAVEN/$ULTIMA/$JAR" 120 > "lib/$JAR.part" 2>/dev/null && [ -s "lib/$JAR.part" ]; then
             mv "lib/$JAR.part" "lib/$JAR"
+            ok "Driver JDBC descargado correctamente: $JAR"
             # Deja solo este driver: con varios en lib/* el classpath mezclaría versiones.
             for f in lib/mariadb-java-client-*.jar; do [ "$f" = "lib/$JAR" ] || rm -f "$f"; done
         else
@@ -64,11 +65,19 @@ if [ -n "$ULTIMA" ]; then
             if [ -n "$EXISTENTES" ]; then
                 aviso "No se pudo descargar $JAR. Se usa el driver de java/lib."
             else
-                falla "No se pudo descargar el driver desde $MAVEN/$ULTIMA/$JAR (se necesita curl o wget)."; exit 1
+                falla "No se pudo descargar el driver desde $MAVEN/$ULTIMA/$JAR (se necesita curl o wget). Se detiene la ejecución de los scripts de Java."; exit 1
             fi
         fi
     fi
 fi
+
+# Verificación final: sin el driver JDBC no se compila ni se ejecuta nada de Java.
+JAR_OK=$(ls lib/mariadb-java-client-*.jar 2>/dev/null | sed -n 1p)
+if [ -z "$JAR_OK" ] || [ ! -s "$JAR_OK" ]; then
+    falla "No se encontró un driver JDBC válido en java/lib. Se detiene la ejecución de los scripts de Java."
+    exit 1
+fi
+ok "Driver JDBC verificado: $(basename "$JAR_OK")"
 
 info "Compilando java/*.java"
 javac -encoding UTF-8 -d out *.java || { falla "Falló la compilación (¿JDK 17+?)."; exit 1; }

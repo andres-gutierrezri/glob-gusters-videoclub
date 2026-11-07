@@ -3,7 +3,7 @@
 # ejecutar-todo.sh — Ejecuta SQL, Python y Java en orden (Linux y macOS)
 # =====================================================================================
 # Llama a ejecutar-sql.sh, ejecutar-python.sh y ejecutar-java.sh, y se detiene en el
-# primer fallo. Acepta --sin-python y --sin-java para omitir un lenguaje.
+# primer fallo de SQL o Java (si Python falla, avisa y continúa con Java). Acepta --sin-python y --sin-java para omitir un lenguaje.
 #
 # Uso (desde cualquier carpeta):
 #     bash shell/bash/ejecutar-todo.sh [--sin-python] [--sin-java]
@@ -24,6 +24,16 @@ for arg in "$@"; do
 done
 
 bash "$AQUI/ejecutar-sql.sh" || exit 1
-[ "$PY" -eq 1 ] && { bash "$AQUI/ejecutar-python.sh" || exit 1; }
+PY_FALLO=0
+if [ "$PY" -eq 1 ]; then
+    if ! bash "$AQUI/ejecutar-python.sh"; then
+        PY_FALLO=1
+        aviso "Los scripts de Python se detuvieron (entorno virtual, dependencias o ejecución). Se continúa con Java."
+    fi
+fi
 [ "$JV" -eq 1 ] && { bash "$AQUI/ejecutar-java.sh" || exit 1; }
-ok "Todo el proyecto se ejecutó correctamente."
+if [ "$PY_FALLO" -eq 1 ]; then
+    aviso "Proyecto ejecutado con advertencias: SQL y Java terminaron bien, pero Python no se completó."
+else
+    ok "Todo el proyecto se ejecutó correctamente."
+fi

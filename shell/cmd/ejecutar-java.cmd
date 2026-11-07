@@ -60,15 +60,26 @@ if errorlevel 1 (
     )
     echo [ERROR] No se pudo descargar el driver desde %MAVEN%/%ULTIMA%/%JAR%
     echo [ERROR] Descargalo en el navegador y guardalo en java\lib\
+    echo [ERROR] Se detiene la ejecucion de los scripts de Java.
     exit /b 1
 )
 move /y "lib\%JAR%.part" "lib\%JAR%" >nul
+echo [OK] Driver JDBC descargado correctamente: %JAR%
 
 :limpiar
 rem Deja solo este driver: con varios en lib/* el classpath mezclaria versiones.
 for %%f in ("lib\mariadb-java-client-*.jar") do if /i not "%%~nxf"=="%JAR%" del "%%f"
 
 :compilar
+rem Verificacion final: sin el driver JDBC no se compila ni se ejecuta nada de Java.
+set "JAR_OK="
+for %%f in ("lib\mariadb-java-client-*.jar") do if %%~zf GTR 0 set "JAR_OK=%%~nxf"
+if not defined JAR_OK (
+    echo [ERROR] No se encontro un driver JDBC valido en java\lib. Se detiene la ejecucion de los scripts de Java.
+    exit /b 1
+)
+echo [OK] Driver JDBC verificado: %JAR_OK%
+
 echo ^>^>^> Compilando java\*.java
 javac -encoding UTF-8 -d out *.java
 if errorlevel 1 (

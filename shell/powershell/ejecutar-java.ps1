@@ -54,6 +54,7 @@ if ($ultima) {
         try {
             Invoke-WebRequest -Uri "$maven/$ultima/$jar" -OutFile "lib\$jar.part" -UseBasicParsing -TimeoutSec 120
             Move-Item -Force "lib\$jar.part" "lib\$jar"
+            Ok "Driver JDBC descargado correctamente: $jar"
             # Deja solo este driver: con varios en lib/* el classpath mezclaría versiones.
             Get-ChildItem 'lib\mariadb-java-client-*.jar' | Where-Object { $_.Name -ne $jar } | Remove-Item -Force
         } catch {
@@ -61,12 +62,20 @@ if ($ultima) {
             if ($existentes.Count -gt 0) {
                 Aviso "No se pudo descargar $jar. Se usa el driver de java\lib."
             } else {
-                Falla "No se pudo descargar el driver desde $maven/$ultima/$jar"
+                Falla "No se pudo descargar el driver desde $maven/$ultima/$jar. Se detiene la ejecución de los scripts de Java."
                 exit 1
             }
         }
     }
 }
+
+# Verificación final: sin el driver JDBC no se compila ni se ejecuta nada de Java.
+$jarOk = Get-ChildItem 'lib\mariadb-java-client-*.jar' -ErrorAction SilentlyContinue | Where-Object { $_.Length -gt 0 } | Select-Object -First 1
+if (-not $jarOk) {
+    Falla 'No se encontró un driver JDBC válido en java\lib. Se detiene la ejecución de los scripts de Java.'
+    exit 1
+}
+Ok "Driver JDBC verificado: $($jarOk.Name)"
 
 Info 'Compilando java\*.java'
 $fuentes = (Get-ChildItem -Filter *.java).Name
