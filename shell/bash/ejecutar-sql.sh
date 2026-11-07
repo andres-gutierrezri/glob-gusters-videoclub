@@ -37,8 +37,8 @@ cd "$RAIZ" || exit 1
 info "Servidor: $USUARIO@$HOST:$PORT  (cliente: $CLIENTE)"
 
 info "Comprobando las versiones del cliente y del servidor"
-info "Cliente: $("$CLIENTE" --version 2>/dev/null | head -n 1)"
-VERSION_SERVIDOR=$("$CLIENTE" -h "$HOST" -P "$PORT" -u "$USUARIO" -N -s -e "SELECT VERSION()" 2>/dev/null | head -n 1)
+info "Cliente: $("$CLIENTE" --version 2>/dev/null | sed -n 1p)"
+VERSION_SERVIDOR=$("$CLIENTE" -h "$HOST" -P "$PORT" -u "$USUARIO" -N -s -e "SELECT VERSION()" 2>/dev/null | sed -n 1p)
 if [ -z "$VERSION_SERVIDOR" ]; then
     aviso "No se pudo consultar la versión del servidor (¿está en marcha y son correctas las credenciales?)."
 else

@@ -36,7 +36,8 @@ fi
 VPY=.venv/bin/python
 
 info "Actualizando pip"
-"$VPY" -m pip install --quiet --upgrade pip \n    || aviso "No se pudo actualizar pip (¿sin conexión a Internet?). Se continúa con la versión actual."
+"$VPY" -m pip install --quiet --upgrade pip \
+    || aviso "No se pudo actualizar pip (¿sin conexión a Internet?). Se continúa con la versión actual."
 
 info "Instalando dependencias (requirements.txt)"
 MARIADB_PKG=1
