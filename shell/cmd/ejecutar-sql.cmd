@@ -7,8 +7,10 @@ rem servidor es anterior a MariaDB 10.2.1 (no instala nada ni pide permisos de a
 rem
 rem Orden: glob_gusters.sql, glob_gusters_insert.sql, commands\01_DDL ... 06_TCL, y despues
 rem las pruebas de integridad y el diagnostico del servidor. Los scripts son repetibles.
-rem Se detiene en el primer error de los 8 scripts; las pruebas y el diagnostico se
-rem ejecutan con --force porque es normal que impriman algunos ERROR esperados (ver README).
+rem Si falla la creacion de la base (los 2 primeros scripts) muestra el error y detiene SQL,
+rem Python y Java; si falla cualquiera de los otros 6, muestra el error y detiene el programa.
+rem Las pruebas deben terminar con PROYECTO OK; las pruebas y el diagnostico se ejecutan con
+rem --force porque es normal que impriman algunos ERROR esperados (ver README).
 rem
 rem Uso (desde cualquier carpeta):
 rem     shell\cmd\ejecutar-sql.cmd [--sin-pruebas] [--sin-diagnostico]
@@ -16,7 +18,7 @@ rem
 rem Si el cliente no esta en el PATH:  set MARIADB_BIN=C:\xampp\mysql\bin\mariadb.exe
 rem Si root tiene contrasena: definela en .env (GLOB_GUSTERS_PASSWORD) o en el entorno.
 rem ====================================================================================
-setlocal
+setlocal EnableDelayedExpansion
 set "CHECK_CLIENTE=1"
 call "%~dp0lib.cmd" || exit /b 1
 cd /d "%RAIZ%"
@@ -61,21 +63,39 @@ if %VER_TOTAL% GEQ 10002001 (
 
 :scripts
 
+rem Los dos primeros scripts crean la base de datos, las tablas y los datos; si fallan no
+rem tiene sentido seguir con nada mas (ni SQL, ni Python, ni Java). El resto de los scripts
+rem tambien detiene el programa en el primer error. El cliente imprime el error en pantalla.
+set "N=0"
 for %%f in (sql\mariadb\glob_gusters.sql sql\mariadb\glob_gusters_insert.sql sql\mariadb\commands\01_DDL.sql sql\mariadb\commands\02_DML.sql sql\mariadb\commands\03_DQL.sql sql\mariadb\commands\04_VDL.sql sql\mariadb\commands\05_DCL.sql sql\mariadb\commands\06_TCL.sql) do (
+    set /a N+=1
     echo ^>^>^> %%f
     "%CLIENTE%" -h %DB_HOST% -P %DB_PORT% -u %DB_USER% --default-character-set=utf8mb4 < "%%f"
     if errorlevel 1 (
-        echo [ERROR] Fallo %%f. Esta el servidor en marcha y son correctas las credenciales?
+        if !N! LEQ 2 (
+            echo [ERROR] Fallo la creacion de la base de datos ^(tablas e insercion de datos^) en %%f.
+            echo [ERROR] Se detiene la ejecucion de los demas scripts SQL, de Python y de Java.
+        ) else (
+            echo [ERROR] Fallo el script %%f. Se detiene la ejecucion del programa.
+        )
         exit /b 1
     )
 )
-echo [OK] Los 8 scripts SQL terminaron sin errores.
+echo [OK] La base de datos y los 8 scripts SQL terminaron sin errores.
 
 if "%PRUEBAS%"=="1" (
     echo ^>^>^> tests\mariadb\glob_gusters_test.sql ^(debe terminar con "PROYECTO OK"^)
-    "%CLIENTE%" -h %DB_HOST% -P %DB_PORT% -u %DB_USER% --default-character-set=utf8mb4 --force %DB_NAME% < tests\mariadb\glob_gusters_test.sql
-    if errorlevel 1 (
-        echo [ERROR] Fallaron las pruebas.
+    set "TMP_PRUEBAS=%TEMP%\glob_gusters_pruebas.txt"
+    "%CLIENTE%" -h %DB_HOST% -P %DB_PORT% -u %DB_USER% --default-character-set=utf8mb4 --force %DB_NAME% < tests\mariadb\glob_gusters_test.sql > "!TMP_PRUEBAS!" 2>&1
+    set "COD_PRUEBAS=!errorlevel!"
+    type "!TMP_PRUEBAS!"
+    rem Ademas del codigo de salida se exige el veredicto "PROYECTO OK" ^(0 pruebas fallidas^).
+    findstr /c:"PROYECTO OK" "!TMP_PRUEBAS!" >nul
+    set "HAY_OK=!errorlevel!"
+    del "!TMP_PRUEBAS!" >nul 2>&1
+    if not "!COD_PRUEBAS!"=="0" set "HAY_OK=1"
+    if not "!HAY_OK!"=="0" (
+        echo [ERROR] Fallaron las pruebas ^(no se obtuvo "PROYECTO OK"^). Se detiene la ejecucion del programa.
         exit /b 1
     )
 )

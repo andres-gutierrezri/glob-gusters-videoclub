@@ -7,8 +7,10 @@
 #
 # Orden: glob_gusters.sql -> glob_gusters_insert.sql -> commands/01_DDL ... 06_TCL,
 # y después las pruebas de integridad y el diagnóstico del servidor (ambos de solo
-# lectura sobre los datos). Los scripts son repetibles. Se detiene en el primer error
-# de los 8 scripts; las pruebas y el diagnóstico se ejecutan con --force porque es
+# lectura sobre los datos). Los scripts son repetibles. Si falla la creación de la base
+# (los 2 primeros scripts) muestra el error y detiene SQL, Python y Java; si falla
+# cualquiera de los otros 6 scripts, muestra el error y detiene el programa. Las pruebas
+# deben terminar con 'PROYECTO OK'; las pruebas y el diagnóstico se ejecutan con --force porque es
 # normal que impriman algunos ERROR esperados (ver README).
 #
 # Uso (desde cualquier carpeta):
@@ -20,7 +22,7 @@
 set -u
 . "$(dirname "$0")/lib.sh"
 
-uso() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
+uso() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; }
 PRUEBAS=1; DIAGNOSTICO=1
 for arg in "$@"; do
     case "$arg" in
@@ -52,19 +54,38 @@ else
     fi
 fi
 
+# Los dos primeros scripts crean la base de datos, las tablas y los datos; si fallan no
+# tiene sentido seguir con nada más (ni SQL, ni Python, ni Java). El resto de los scripts
+# también detiene el programa en el primer error. El cliente imprime el error en pantalla.
+N=0
 for f in "${SQL_SCRIPTS[@]}"; do
+    N=$((N + 1))
     info "$f"
     if ! "$CLIENTE" -h "$HOST" -P "$PORT" -u "$USUARIO" --default-character-set=utf8mb4 < "$f"; then
-        falla "Falló $f. ¿Está el servidor en marcha y son correctas las credenciales?"
+        if [ "$N" -le 2 ]; then
+            falla "Falló la creación de la base de datos (tablas e inserción de datos) en $f."
+            falla "Se detiene la ejecución de los demás scripts SQL, de Python y de Java."
+        else
+            falla "Falló el script $f. Se detiene la ejecución del programa."
+        fi
         exit 1
     fi
 done
-ok "Los ${#SQL_SCRIPTS[@]} scripts SQL terminaron sin errores."
+ok "La base de datos y los ${#SQL_SCRIPTS[@]} scripts SQL terminaron sin errores."
 
 if [ "$PRUEBAS" -eq 1 ]; then
     info "tests/mariadb/glob_gusters_test.sql (debe terminar con 'PROYECTO OK')"
+    SALIDA_PRUEBAS=$(mktemp)
     "$CLIENTE" -h "$HOST" -P "$PORT" -u "$USUARIO" --default-character-set=utf8mb4 --force "$BASE" \
-        < tests/mariadb/glob_gusters_test.sql || { falla "Fallaron las pruebas."; exit 1; }
+        < tests/mariadb/glob_gusters_test.sql 2>&1 | tee "$SALIDA_PRUEBAS"
+    CODIGO=${PIPESTATUS[0]}
+    # Además del código de salida se exige el veredicto "PROYECTO OK" (0 pruebas fallidas).
+    if [ "$CODIGO" -ne 0 ] || ! grep -q "PROYECTO OK" "$SALIDA_PRUEBAS"; then
+        rm -f "$SALIDA_PRUEBAS"
+        falla "Fallaron las pruebas (no se obtuvo 'PROYECTO OK'). Se detiene la ejecución del programa."
+        exit 1
+    fi
+    rm -f "$SALIDA_PRUEBAS"
 fi
 
 if [ "$DIAGNOSTICO" -eq 1 ]; then

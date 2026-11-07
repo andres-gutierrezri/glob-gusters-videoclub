@@ -6,7 +6,9 @@
 #
 # Orden: glob_gusters.sql -> glob_gusters_insert.sql -> commands\01_DDL ... 06_TCL,
 # y después las pruebas de integridad y el diagnóstico del servidor. Los scripts son
-# repetibles. Se detiene en el primer error de los 8 scripts; las pruebas y el
+# repetibles. Si falla la creación de la base (los 2 primeros scripts) muestra el error y
+# detiene SQL, Python y Java; si falla cualquiera de los otros 6, muestra el error y
+# detiene el programa. Las pruebas deben terminar con 'PROYECTO OK'; las pruebas y el
 # diagnóstico se ejecutan con --force porque es normal que impriman algunos ERROR
 # esperados (ver README).
 #
@@ -45,20 +47,36 @@ if ($LASTEXITCODE -ne 0 -or -not $versionServidor) {
     }
 }
 
+# Los dos primeros scripts crean la base de datos, las tablas y los datos; si fallan no
+# tiene sentido seguir con nada más (ni SQL, ni Python, ni Java). El resto de los scripts
+# también detiene el programa en el primer error. El cliente imprime el error en pantalla.
+$n = 0
 foreach ($f in $script:SqlScripts) {
+    $n++
     Info $f
     & $script:Cliente @conexion -e "source $f"
     if ($LASTEXITCODE -ne 0) {
-        Falla "Falló $f. ¿Está el servidor en marcha y son correctas las credenciales?"
+        if ($n -le 2) {
+            Falla "Falló la creación de la base de datos (tablas e inserción de datos) en $f."
+            Falla 'Se detiene la ejecución de los demás scripts SQL, de Python y de Java.'
+        } else {
+            Falla "Falló el script $f. Se detiene la ejecución del programa."
+        }
         exit 1
     }
 }
-Ok "Los $($script:SqlScripts.Count) scripts SQL terminaron sin errores."
+Ok "La base de datos y los $($script:SqlScripts.Count) scripts SQL terminaron sin errores."
 
 if (-not $SinPruebas) {
     Info "tests/mariadb/glob_gusters_test.sql (debe terminar con 'PROYECTO OK')"
-    & $script:Cliente @conexion --force $script:Base -e 'source tests/mariadb/glob_gusters_test.sql'
-    if ($LASTEXITCODE -ne 0) { Falla 'Fallaron las pruebas.'; exit 1 }
+    $salidaPruebas = (& $script:Cliente @conexion --force $script:Base -e 'source tests/mariadb/glob_gusters_test.sql' 2>&1 | Out-String)
+    $codigo = $LASTEXITCODE
+    Write-Host $salidaPruebas
+    # Además del código de salida se exige el veredicto "PROYECTO OK" (0 pruebas fallidas).
+    if ($codigo -ne 0 -or $salidaPruebas -notmatch 'PROYECTO OK') {
+        Falla "Fallaron las pruebas (no se obtuvo 'PROYECTO OK'). Se detiene la ejecución del programa."
+        exit 1
+    }
 }
 
 if (-not $SinDiagnostico) {
