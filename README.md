@@ -247,7 +247,7 @@ glob-gusters-videoclub/
 │   ├── Ddl.java / Dml.java / Dql.java   # Equivalentes en Java de 01_DDL, 02_DML y 03_DQL
 │   └── Vdl.java / Dcl.java / Tcl.java   # Equivalentes en Java de 04_VDL, 05_DCL y 06_TCL
 ├── shell/                               # Lanzadores que ejecutan SQL, Python y Java con un comando
-│   ├── bash/                            # Linux y macOS: lib.sh, configurar-utf8.sh, ejecutar-sql/python/java/todo.sh
+│   ├── bash/                            # Linux y macOS: lib.sh, configurar-utf8.sh, instalar-connector-c.sh (solo macOS), ejecutar-sql/python/java/todo.sh
 │   ├── powershell/                      # Windows PowerShell: lib.ps1, configurar-utf8.ps1, ejecutar-sql/python/java/todo.ps1
 │   └── cmd/                             # Windows CMD: lib.cmd, configurar-utf8.cmd, ejecutar-sql/python/java/todo.cmd
 ├── tests/
@@ -470,8 +470,10 @@ python3 py/conexion.py
 > `requirements.txt` incluye `mariadb`, que necesita MariaDB Connector/C ≥ 3.3.1 instalado
 > en el sistema (ver la tabla de instalación). Si solo quieres usar PyMySQL, comenta esa
 > línea antes de instalar: todo `py/` funciona igual salvo `conexion_mariabd.py`. En macOS,
-> si `pip` no encuentra el Connector/C instalado con Homebrew, ejecuta antes
-> `export MARIADB_CONFIG=/opt/homebrew/opt/mariadb-connector-c/bin/mariadb_config`.
+> ejecuta antes `bash shell/bash/instalar-connector-c.sh`: instala `mariadb-connector-c` con
+> Homebrew y define `LDFLAGS`, `CPPFLAGS` y `MARIADB_CONFIG` (también en `~/.zshrc`). Así
+> `pip` no falla con «requires MariaDB Connector/C >= 3.3.1» (el Connector/C 3.1.x de XAMPP es
+> más antiguo). El lanzador `ejecutar-python.sh` lo hace solo en macOS.
 
 > **Requisito previo (obligatorio):** antes de ejecutar cualquier script de Python, el entorno
 > virtual `.venv` debe estar **instalado y activado**. Si no existe, créalo con
@@ -828,7 +830,8 @@ Python y los de Java. Hay una versión por sistema operativo y cada una hace lo 
 | Lanzador | Qué ejecuta |
 |---|---|
 | `ejecutar-sql` | Primero muestra la versión del cliente y del servidor y avisa si el servidor es anterior a MariaDB 10.2.1 (no instala nada; sin conexión avisa y sigue). Luego los 8 scripts de `sql/mariadb/` en orden, luego `tests/mariadb/glob_gusters_test.sql` (25 pruebas) y el diagnóstico `check-mariadb`. Si falla la creación de la base (los 2 primeros scripts: tablas e inserción de datos), muestra el error y detiene SQL, Python y Java; si falla cualquiera de los otros 6, muestra el error y detiene el programa. Las pruebas deben terminar con «PROYECTO OK»; si no, también se detiene. |
-| `ejecutar-python` | Primero verifica que exista el entorno virtual `.venv` y lo confirma en pantalla; si falta, lo crea y confirma la creación. Si no se puede crear, muestra un aviso y se detiene (no instala ni ejecuta nada de Python). Después actualiza `pip` (si no hay Internet avisa y sigue), instala `requirements.txt`, muestra la lista de dependencias instaladas con sus versiones y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
+| `ejecutar-python` | Primero verifica que exista el entorno virtual `.venv` y lo confirma en pantalla; si falta, lo crea y confirma la creación. Si no se puede crear, muestra un aviso y se detiene (no instala ni ejecuta nada de Python). Después actualiza `pip` (si no hay Internet avisa y sigue); **solo en macOS** ejecuta antes `instalar-connector-c.sh` (ver abajo) para que el paquete `mariadb` compile; en Linux no hace nada extra. Instala `requirements.txt`, muestra la lista de dependencias instaladas con sus versiones y ejecuta `conexion`, `ddl`, `dml`, `dql`, `vdl`, `dcl`, `tcl` y `conexion_mariabd` de `py/`. |
+| `instalar-connector-c` (solo `.sh`, macOS) | Instala `mariadb-connector-c` con Homebrew (si falta), exporta `LDFLAGS`, `CPPFLAGS` y `MARIADB_CONFIG` con la ruta de `brew --prefix` (Apple Silicon o Intel) y las guarda sin duplicar en `~/.zshrc`. En Linux no hace nada. Lo llama `ejecutar-python.sh`; también puede ejecutarse solo. |
 | `ejecutar-java` | Primero actualiza el driver JDBC: consulta en Maven Central la última versión **3.x** de MariaDB Connector/J y, si `java/lib/` no la tiene, la descarga y borra las anteriores (sin Internet usa el que haya; si no hay ninguno, baja la 3.5.3). Solo avanza dentro de la serie 3.x: la 4.x exige TLS y no conecta con el MariaDB de XAMPP sin configurarlo. Al descargar muestra «Driver JDBC descargado correctamente» y, antes de compilar, verifica que haya un `.jar` válido en `java/lib/` («Driver JDBC verificado»); si no lo hay, muestra un error y se detiene sin ejecutar nada de Java. Luego compila `java/*.java` y ejecuta `Conexion`, `Ddl`, `Dml`, `Dql`, `Vdl`, `Dcl` y `Tcl`. |
 | `ejecutar-todo` | Los tres anteriores, en ese orden. Se detiene en el primer fallo de SQL o de Java. Si falla **Python** (por ejemplo, no se pudo crear `.venv`), muestra un aviso, **continúa con Java** y al final indica «Proyecto ejecutado con advertencias»; en ese caso termina con código 0. |
 | `lib` | Funciones comunes (no se ejecuta directamente): lee el `.env`, localiza el cliente `mariadb` y define el orden de los scripts SQL. |
@@ -934,7 +937,7 @@ shell\cmd\ejecutar-java.cmd
   no cambian ningún script SQL, Python ni Java. Son repetibles.
 - El script `dcl` (SQL, Python y Java) crea cuentas de ejemplo y requiere un usuario con
   privilegios administrativos (el `root` de XAMPP los tiene).
-- Si el paquete `mariadb` de pip no se puede instalar (falta MariaDB Connector/C), el lanzador de
+- En macOS, `ejecutar-python.sh` instala antes MariaDB Connector/C (`instalar-connector-c.sh`). Si el paquete `mariadb` de pip aun así no se puede instalar, el lanzador de
   Python instala solo PyMySQL, omite `conexion_mariabd.py` con un aviso y termina bien.
 - Los scripts de `sql/oracle_apex/` **no** se incluyen: requieren un Oracle Database o un workspace
   de APEX (ver [Versión para Oracle APEX](#versión-para-oracle-apex)).
