@@ -8,6 +8,7 @@
 #
 # Si el paquete `mariadb` no se puede instalar (falta MariaDB Connector/C), se instala
 # solo PyMySQL y se omite conexion_mariabd.py con un aviso; el resto funciona igual.
+# En macOS instala antes MariaDB Connector/C con instalar-connector-c.sh (Homebrew).
 #
 # Uso (desde cualquier carpeta):
 #     bash shell/bash/ejecutar-python.sh
@@ -15,7 +16,7 @@
 set -u
 . "$(dirname "$0")/lib.sh"
 
-uso() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; }
+uso() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; }
 ayuda_si_se_pide "${1:-}"
 
 cd "$RAIZ" || exit 1
@@ -46,6 +47,22 @@ VPY=.venv/bin/python
 info "Actualizando pip"
 "$VPY" -m pip install --quiet --upgrade pip \
     || aviso "No se pudo actualizar pip (¿sin conexión a Internet?). Se continúa con la versión actual."
+
+# En macOS, instala MariaDB Connector/C (Homebrew) y exporta MARIADB_CONFIG, LDFLAGS y CPPFLAGS
+# para que pip compile el paquete `mariadb`. En Linux no hace nada. Si falla, se sigue: más
+# abajo se instalará solo PyMySQL.
+if [ "$(uname -s)" = "Darwin" ]; then
+    if bash "$(dirname "$0")/instalar-connector-c.sh"; then
+        # El script anterior corre en otro proceso: aquí se exportan las variables para pip.
+        PREFIJO_CC=$(brew --prefix mariadb-connector-c 2>/dev/null || true)
+        if [ -n "$PREFIJO_CC" ]; then
+            export LDFLAGS="-L$PREFIJO_CC/lib" CPPFLAGS="-I$PREFIJO_CC/include"
+            export MARIADB_CONFIG="$PREFIJO_CC/bin/mariadb_config"
+        fi
+    else
+        aviso "No se pudo instalar MariaDB Connector/C; el paquete 'mariadb' podría fallar."
+    fi
+fi
 
 info "Instalando dependencias (requirements.txt)"
 MARIADB_PKG=1
